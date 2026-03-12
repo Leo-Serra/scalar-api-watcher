@@ -22,7 +22,7 @@ I design docs (`docs/00-init.md` → `docs/10-settings.md`) definiscono ogni asp
 | 2 | Data Models | ✅ Fatto |
 | 3 | Diff Engine | ✅ Fatto |
 | 4 | Cloud Functions | ✅ Fatto |
-| 5 | Auth Store + Login | ⬜ Da fare |
+| 5 | Auth Store + Login | ✅ Fatto |
 | 6 | Versions Store + Dashboard | ⬜ Da fare |
 | 7 | Reports Store + Report Viewer | ⬜ Da fare |
 | 8 | Progress Store | ⬜ Da fare |
