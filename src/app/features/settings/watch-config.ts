@@ -51,6 +51,10 @@ export class WatchConfigComponent {
     this.headers.set([]);
   }
 
+  /**
+   * Elimina una watch config previa conferma dell'utente.
+   * @param config - Oggetto config con id e specUrl per il messaggio di conferma
+   */
   async removeConfig(config: { id?: string; specUrl: string }): Promise<void> {
     if (!config.id || !confirm(`Eliminare la config per ${config.specUrl}?`)) return;
     await this.store.removeConfig(config.id);
