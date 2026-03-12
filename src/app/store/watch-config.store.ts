@@ -29,6 +29,7 @@ export const WatchConfigStore = signalStore(
     const authStore = inject(AuthStore);
 
     return {
+      /** Sottoscrive in real-time la collection watchConfigs da Firestore. */
       loadConfigs: rxMethod<void>(
         pipe(
           switchMap(() => {
@@ -44,6 +45,13 @@ export const WatchConfigStore = signalStore(
         ),
       ),
 
+      /**
+       * Crea una nuova watch config associata all'utente corrente.
+       * @param specUrl - URL della specifica OpenAPI da monitorare
+       * @param cronSchedule - Espressione cron per la frequenza di controllo
+       * @param maxHistory - Numero massimo di versioni da mantenere in storico
+       * @param extraHeaders - Header HTTP aggiuntivi per il fetch della spec
+       */
       async addConfig(
         specUrl: string,
         cronSchedule: string,
@@ -65,6 +73,10 @@ export const WatchConfigStore = signalStore(
         }
       },
 
+      /**
+       * Elimina una watch config da Firestore.
+       * @param id - ID della config da eliminare
+       */
       async removeConfig(id: string): Promise<void> {
         await svc.delete(id);
       },

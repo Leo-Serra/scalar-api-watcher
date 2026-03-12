@@ -8,6 +8,12 @@ import { WatchConfig } from '../models/watch-config.model';
 import { SpecVersion } from '../models/spec-version.model';
 import { DiffReport } from '../models/diff-report.model';
 
+/**
+ * Factory per converter Firestore che inietta automaticamente `doc.id` nel campo `id`
+ * in lettura, e lo rimuove in scrittura per evitare duplicazione.
+ * @typeParam T - Tipo del documento, deve avere un campo `id` opzionale
+ * @returns Un `FirestoreDataConverter<T>` che gestisce la serializzazione/deserializzazione
+ */
 function makeConverter<T extends { id?: string }>(): FirestoreDataConverter<T> {
   return {
     toFirestore({ id, ...data }: T): DocumentData {

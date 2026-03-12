@@ -12,6 +12,11 @@ export class SpecVersionService {
   private fb = inject(FirebaseService);
   private http = inject(HttpClient);
 
+  /**
+   * Observable real-time delle versioni per una config, ordinate desc per timestamp.
+   * @param configId - ID della watch config
+   * @returns Observable che emette la lista aggiornata di SpecVersion
+   */
   getVersions$(configId: string): Observable<SpecVersion[]> {
     return new Observable<SpecVersion[]>((subscriber) => {
       const col = collection(this.fb.firestore, 'specVersions').withConverter(specVersionConverter);
@@ -28,6 +33,11 @@ export class SpecVersionService {
     });
   }
 
+  /**
+   * Scarica il JSON completo della spec OpenAPI dal path `specRef` in Cloud Storage.
+   * @param version - La SpecVersion il cui `specRef` punta al file in Storage
+   * @returns Oggetto JSON della specifica OpenAPI
+   */
   async resolveSpecJson(version: SpecVersion): Promise<Record<string, unknown>> {
     const url = await getDownloadURL(ref(this.fb.storage, version.specRef));
     return firstValueFrom(this.http.get<Record<string, unknown>>(url));

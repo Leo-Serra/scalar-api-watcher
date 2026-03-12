@@ -26,14 +26,20 @@ export class WatchConfigComponent {
   objectKeys = Object.keys;
   hasKeys = (obj: Record<string, string>) => Object.keys(obj).length > 0;
 
+  /** Aggiunge una nuova riga header vuota al form. */
   addHeader() {
     this.headers.update((h) => [...h, { key: '', value: '' }]);
   }
 
+  /**
+   * Rimuove una riga header dal form per indice.
+   * @param i - Indice della riga da rimuovere
+   */
   removeHeader(i: number) {
     this.headers.update((h) => h.filter((_, idx) => idx !== i));
   }
 
+  /** Salva la nuova watch config e resetta il form. */
   async save(): Promise<void> {
     if (!this.specUrl.trim()) return;
     const extraHeaders = this.headers().reduce<Record<string, string>>((acc, h) => {

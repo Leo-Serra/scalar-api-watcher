@@ -3,6 +3,7 @@ import { signalStore, withState, withComputed, withMethods, patchState } from '@
 import { DiffReportService } from '../core/services/diff-report.service';
 import { DiffReport, EndpointChange } from '../core/models/diff-report.model';
 
+/** Filtro attivo nella vista report: 'breaking' è trasversale (non è un ChangeType). */
 export type FilterType = 'all' | 'added' | 'removed' | 'modified' | 'breaking';
 
 interface ReportsState {
@@ -51,6 +52,13 @@ export const ReportsStore = signalStore(
     const svc = inject(DiffReportService);
 
     return {
+      /**
+       * Carica un report dal trio (configId, oldVersionId, newVersionId).
+       * Il service risolve anche `changesRef` scaricando i dettagli da Storage.
+       * @param configId - ID della watch config
+       * @param oldVersionId - ID della versione precedente
+       * @param newVersionId - ID della nuova versione
+       */
       async loadReport(
         configId: string,
         oldVersionId: string,
@@ -65,6 +73,10 @@ export const ReportsStore = signalStore(
         }
       },
 
+      /**
+       * Imposta il filtro attivo per la vista report.
+       * @param filter - Tipo di filtro da applicare
+       */
       setFilter(filter: FilterType): void {
         patchState(store, { activeFilter: filter });
       },

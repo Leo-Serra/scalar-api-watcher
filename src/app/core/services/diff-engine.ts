@@ -48,6 +48,11 @@ interface ResponseObject {
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
+/**
+ * Type guard che verifica se una stringa è un metodo HTTP valido.
+ * @param key - Stringa da verificare (case-insensitive)
+ * @returns `true` se `key` è un metodo HTTP supportato
+ */
 function isHttpMethod(key: string): key is Lowercase<HttpMethod> {
   return HTTP_METHODS.includes(key.toUpperCase() as HttpMethod);
 }
@@ -58,6 +63,11 @@ function endpointKey(path: string, method: string): string {
   return `${method.toUpperCase()} ${path}`;
 }
 
+/**
+ * Estrae tutti gli endpoint dalla spec OpenAPI in una mappa indicizzata per "METHOD /path".
+ * @param spec - Specifica OpenAPI da analizzare
+ * @returns Mappa chiave→endpoint con path, metodo HTTP e oggetto operazione
+ */
 function extractEndpoints(
   spec: OpenApiSpec,
 ): Map<string, { path: string; method: HttpMethod; op: OperationObject }> {
@@ -78,8 +88,13 @@ function extractEndpoints(
   return map;
 }
 
-// --- Confronto parametri ---
-
+/**
+ * Confronta i parametri tra due versioni di un endpoint.
+ * Breaking: parametro required rimosso, tipo cambiato, parametro reso required.
+ * @param oldParams - Parametri della versione precedente
+ * @param newParams - Parametri della nuova versione
+ * @returns Lista di field changes rilevati tra le due versioni
+ */
 function diffParameters(
   oldParams: ParameterObject[] = [],
   newParams: ParameterObject[] = [],
@@ -130,8 +145,14 @@ function diffParameters(
   return changes;
 }
 
-// --- Confronto schema (requestBody / response) ---
-
+/**
+ * Confronta le properties di uno schema JSON (requestBody o response).
+ * Lavora solo al primo livello di `properties` — non ricorsivo.
+ * @param oldSchema - Schema JSON della versione precedente
+ * @param newSchema - Schema JSON della nuova versione
+ * @param prefix - Prefisso per il nome dei field (es. "requestBody", "response.200")
+ * @returns Lista di field changes rilevati tra i due schemi
+ */
 function diffSchema(
   oldSchema: Record<string, unknown> | undefined,
   newSchema: Record<string, unknown> | undefined,
@@ -189,8 +210,11 @@ function diffSchema(
   return changes;
 }
 
-// --- Confronto singolo endpoint ---
-
+/**
+ * Estrae lo schema dal primo content-type disponibile (tipicamente application/json).
+ * @param obj - Oggetto requestBody o response da cui estrarre lo schema
+ * @returns Schema JSON del primo content-type, oppure `undefined` se assente
+ */
 function getFirstContentSchema(
   obj: RequestBodyObject | ResponseObject | undefined,
 ): Record<string, unknown> | undefined {
@@ -199,6 +223,13 @@ function getFirstContentSchema(
   return first?.schema as Record<string, unknown> | undefined;
 }
 
+/**
+ * Confronta due operazioni (stesso endpoint) e rileva tutte le differenze:
+ * parametri, deprecation, requestBody e response schema.
+ * @param oldOp - Operazione della versione precedente
+ * @param newOp - Operazione della nuova versione
+ * @returns Lista di field changes aggregati da tutti i sotto-confronti
+ */
 function diffOperation(oldOp: OperationObject, newOp: OperationObject): FieldChange[] {
   const changes: FieldChange[] = [];
 
@@ -233,8 +264,17 @@ function diffOperation(oldOp: OperationObject, newOp: OperationObject): FieldCha
   return changes;
 }
 
-// --- Entry point ---
-
+/**
+ * Entry point del diff engine. Confronta due spec OpenAPI e produce un report
+ * con le differenze per endpoint (added/removed/modified) e i field changes.
+ * Funzione pura senza dipendenze Angular — usabile anche nelle Cloud Functions.
+ * @param oldSpec - Specifica OpenAPI della versione precedente
+ * @param newSpec - Specifica OpenAPI della nuova versione
+ * @param configId - ID della watch config di riferimento
+ * @param oldVersionId - ID della versione precedente
+ * @param newVersionId - ID della nuova versione
+ * @returns Oggetto DiffReport parziale (senza id, generatedAt, changesRef)
+ */
 export function computeDiff(
   oldSpec: OpenApiSpec,
   newSpec: OpenApiSpec,

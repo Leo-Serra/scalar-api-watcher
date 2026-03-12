@@ -20,6 +20,11 @@ export class DashboardComponent {
   progressStore = inject(ProgressStore);
   private router = inject(Router);
 
+  /**
+   * Naviga al report-viewer con il diff tra la versione selezionata e quella precedente.
+   * Le versioni sono ordinate desc, quindi idx+1 è la versione immediatamente precedente.
+   * @param version - La SpecVersion selezionata dall'utente
+   */
   onViewDiff(version: SpecVersion): void {
     const versions = this.versionsStore.versions();
     const idx = versions.findIndex((v) => v.id === version.id);
@@ -35,6 +40,10 @@ export class DashboardComponent {
     }
   }
 
+  /**
+   * Aggiorna il bookmark "sei qui" alla versione selezionata dall'utente.
+   * @param version - La SpecVersion da segnare come ultima letta
+   */
   async onMarkAsRead(version: SpecVersion): Promise<void> {
     const uid = this.authStore.uid();
     if (!uid || !version.id) return;

@@ -31,6 +31,7 @@ export class ReportViewerComponent implements OnInit, OnDestroy {
     { label: 'Breaking', value: 'breaking' },
   ];
 
+  /** Carica il report dai query params e lo segna come visto nel progress dell'utente. */
   async ngOnInit(): Promise<void> {
     const { configId, oldVersionId, newVersionId } = this.route.snapshot.queryParams;
     await this.store.loadReport(configId, oldVersionId, newVersionId);

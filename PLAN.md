@@ -16,39 +16,43 @@ I design docs (`docs/00-init.md` → `docs/10-settings.md`) definiscono ogni asp
 
 ## Stato Avanzamento
 
-| Fase | Descrizione | Stato |
-|------|-------------|-------|
-| 1 | Setup, dipendenze, Firebase, Tailwind, routing | ✅ Fatto |
-| 2 | Data Models | ✅ Fatto |
-| 3 | Diff Engine | ✅ Fatto |
-| 4 | Cloud Functions | ✅ Fatto |
-| 5 | Auth Store + Login | ✅ Fatto |
-| 6 | Versions Store + Dashboard | ✅ Fatto |
-| 7 | Reports Store + Report Viewer | ✅ Fatto |
-| 8 | Progress Store | ✅ Fatto |
-| 9 | Settings / Watch Config | ⬜ Da fare |
-| 10 | Integrazione & Polish | ⬜ Da fare |
+| Fase | Descrizione                                    | Stato      |
+| ---- | ---------------------------------------------- | ---------- |
+| 1    | Setup, dipendenze, Firebase, Tailwind, routing | ✅ Fatto   |
+| 2    | Data Models                                    | ✅ Fatto   |
+| 3    | Diff Engine                                    | ✅ Fatto   |
+| 4    | Cloud Functions                                | ✅ Fatto   |
+| 5    | Auth Store + Login                             | ✅ Fatto   |
+| 6    | Versions Store + Dashboard                     | ✅ Fatto   |
+| 7    | Reports Store + Report Viewer                  | ✅ Fatto   |
+| 8    | Progress Store                                 | ✅ Fatto   |
+| 9    | Settings / Watch Config                        | ⬜ Da fare |
+| 10   | Integrazione & Polish                          | ⬜ Da fare |
 
 ---
 
 ## Fase 1 — Setup & Dipendenze (`docs/00-init.md`, `docs/01-setup.md`, `docs/02-firebase-config.md`)
 
 ### 1.1 Installare dipendenze frontend
+
 ```
 npm install firebase @angular/fire @ngrx/signals @ngrx/operators
 npm install -D tailwindcss postcss autoprefixer
 ```
 
 ### 1.2 Configurare Tailwind CSS
+
 - Creare `tailwind.config.js` con content paths per `src/`
 - Aggiungere direttive Tailwind in `src/styles.scss`
 
 ### 1.3 Creare file environment
+
 - `src/environments/environment.ts` (dev, con emulatori)
 - `src/environments/environment.prod.ts` (prod)
 - Entrambi con: `production`, `specSizeThresholdBytes`, `firebase: { ... }`
 
 ### 1.4 Configurare Firebase
+
 - `firebase.json` (hosting, firestore, storage, functions)
 - `.firebaserc` (project alias)
 - `firestore.rules` (security rules per collection)
@@ -56,11 +60,13 @@ npm install -D tailwindcss postcss autoprefixer
 - `storage.rules` (rules per specs/ e diffs/)
 
 ### 1.5 Configurare `app.config.ts`
+
 - Aggiungere `provideFirebaseApp`, `provideAuth`, `provideFirestore`, `provideStorage` da `@angular/fire`
 - Aggiungere `provideHttpClient`
 - Configurare `provideRouter` con `withComponentInputBinding()`
 
 ### 1.6 Creare struttura cartelle
+
 ```
 src/app/
 ├── core/models/
@@ -76,6 +82,7 @@ src/app/
 ```
 
 ### 1.7 Configurare routing (`app.routes.ts`)
+
 - `/login` → LoginComponent
 - `/dashboard` → DashboardComponent (authGuard)
 - `/report/:reportId` → ReportViewerComponent (authGuard)
@@ -114,10 +121,12 @@ Creare le interfacce TypeScript:
 ## Fase 4 — Cloud Functions (`docs/05-cloud-functions.md`)
 
 ### 4.1 Setup Functions
+
 - Creare `functions/` con `package.json`, `tsconfig.json`
 - `npm install firebase-admin firebase-functions node-fetch js-yaml`
 
 ### 4.2 Implementare
+
 - `functions/src/index.ts` — Export della function
 - `functions/src/watcher.fn.ts` — `watcherScheduled` (onSchedule, ogni 60 min, Europe/Rome)
   - Per ogni WatchConfig: fetch spec → hash → dedup → save to Storage → save metadata → compute diff → save report → prune history
@@ -145,17 +154,20 @@ Creare le interfacce TypeScript:
 ## Fase 6 — Versions Store + Dashboard (`docs/07-versions-store.md`)
 
 ### 6.1 Service
+
 - `src/app/core/services/spec-version.service.ts`
   - `getVersions$(configId)` — Observable da Firestore
   - `resolveSpecJson(version)` — Download da Cloud Storage
 
 ### 6.2 Store
+
 - `src/app/store/versions.store.ts`
   - State: `versions`, `activeConfigId`, `loadingVersions`, `previewVersion`, `previewJson`, `previewLoading`, `error`
   - Computed: `hasVersions`, `latestVersion`
   - Methods: `loadVersions`, `openSpecPreview`, `closeSpecPreview`, `setActiveConfig`
 
 ### 6.3 Components
+
 - `src/app/features/dashboard/dashboard.ts` + `.html` + `.scss`
   - Navbar con email utente e logout
   - Contatore versioni non lette (da ProgressStore)
@@ -172,12 +184,14 @@ Creare le interfacce TypeScript:
 ## Fase 7 — Reports Store + Report Viewer (`docs/08-reports-store.md`)
 
 ### 7.1 Service
+
 - `src/app/core/services/diff-report.service.ts`
   - `getReport(configId, oldVersionId, newVersionId)`
   - `getReportById(reportId)`
   - `resolveChanges(report)` — Download changes da Storage
 
 ### 7.2 Store
+
 - `src/app/store/reports.store.ts`
   - State: `report`, `loading`, `error`, `activeFilter`
   - Computed: `summary`, `filteredChanges`, `countByFilter`
@@ -185,6 +199,7 @@ Creare le interfacce TypeScript:
   - FilterType: `'all' | 'added' | 'removed' | 'modified' | 'breaking'`
 
 ### 7.3 Components
+
 - `src/app/features/report-viewer/report-viewer.ts` + `.html` + `.scss`
   - Header con back link
   - Summary chips (4 colonne, color-coded)
@@ -202,18 +217,21 @@ Creare le interfacce TypeScript:
 ## Fase 8 — Progress Store (`docs/09-progress-store.md`)
 
 ### 8.1 Service
+
 - `src/app/core/services/user-progress.service.ts`
   - `getProgress$(uid, configId)` — Observable
   - `updateLastSeen(uid, configId, versionId)`
   - `markReportViewed(uid, configId, reportId)` — usa `arrayUnion`
 
 ### 8.2 Store
+
 - `src/app/store/progress.store.ts`
   - State: `progress`, `loading`
   - Computed: `lastSeenVersionId`, `viewedReports`, `unreadCount`
   - Methods: `watchProgress`, `updateLastSeen`, `markReportViewed`
 
 ### 8.3 Shared
+
 - `src/app/shared/pipes/relative-time.pipe.ts` — "adesso", "Nm fa", "Nh fa", "ieri", "Ng fa", date it-IT
 - `src/app/shared/components/badge/badge.ts` — Componente badge riutilizzabile
 
@@ -222,17 +240,20 @@ Creare le interfacce TypeScript:
 ## Fase 9 — Settings / Watch Config (`docs/10-settings.md`)
 
 ### 9.1 Service
+
 - `src/app/core/services/watch-config.service.ts`
   - `getConfigs$()` — Observable
   - `create(data, uid)`
   - `delete(id)`
 
 ### 9.2 Store
+
 - `src/app/store/watch-config.store.ts`
   - State: `configs`, `loading`, `saving`, `error`
   - Methods: `loadConfigs`, `addConfig`, `removeConfig`
 
 ### 9.3 Component
+
 - `src/app/features/settings/watch-config.ts` + `.html` + `.scss`
   - Lista config esistenti (read-only con delete)
   - Form per aggiungere nuova config:

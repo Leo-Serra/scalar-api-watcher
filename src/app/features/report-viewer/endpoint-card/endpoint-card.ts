@@ -13,6 +13,10 @@ export class EndpointCardComponent {
   @Input({ required: true }) change!: EndpointChange;
   expanded = signal(false);
 
+  /**
+   * Restituisce le classi CSS Tailwind per il badge del metodo HTTP.
+   * @returns Stringa di classi CSS corrispondenti al metodo dell'endpoint
+   */
   methodClass(): string {
     const map: Record<string, string> = {
       GET: 'bg-blue-100 text-blue-700',

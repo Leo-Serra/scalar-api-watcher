@@ -13,6 +13,10 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { FirebaseService } from '../core/services/firebase.service';
 import { patchState } from '@ngrx/signals';
 
+/**
+ * `initialized` diventa true dopo il primo callback di `onAuthStateChanged`,
+ * permettendo ai componenti di distinguere "non ancora verificato" da "non loggato".
+ */
 interface AuthState {
   user: User | null;
   loading: boolean;
@@ -44,6 +48,7 @@ export const AuthStore = signalStore(
     const router = inject(Router);
 
     return {
+      /** Sottoscrive `onAuthStateChanged`; redirige a /login al logout. */
       initAuthListener(): void {
         onAuthStateChanged(fb.auth, (user) => {
           patchState(store, { user, initialized: true });
@@ -51,6 +56,11 @@ export const AuthStore = signalStore(
         });
       },
 
+      /**
+       * Effettua il login con email e password. Redirige a /dashboard in caso di successo.
+       * @param email - Email dell'utente
+       * @param password - Password dell'utente
+       */
       async loginWithEmail(email: string, password: string): Promise<void> {
         patchState(store, { loading: true, error: null });
         try {
@@ -64,6 +74,7 @@ export const AuthStore = signalStore(
         }
       },
 
+      /** Effettua il login con Google popup. Redirige a /dashboard in caso di successo. */
       async loginWithGoogle(): Promise<void> {
         patchState(store, { loading: true, error: null });
         try {
@@ -77,6 +88,7 @@ export const AuthStore = signalStore(
         }
       },
 
+      /** Effettua il logout e redirige a /login. */
       async logout(): Promise<void> {
         await signOut(fb.auth);
         patchState(store, { user: null });
@@ -96,6 +108,11 @@ export const AuthStore = signalStore(
   }),
 );
 
+/**
+ * Scrive/aggiorna il profilo utente in Firestore con merge, così lastLogin è sempre fresco.
+ * @param fb - Istanza del FirebaseService
+ * @param user - Oggetto User di Firebase Auth
+ */
 async function saveProfile(fb: FirebaseService, user: User): Promise<void> {
   await setDoc(
     doc(fb.firestore, `users/${user.uid}`),
@@ -108,6 +125,11 @@ async function saveProfile(fb: FirebaseService, user: User): Promise<void> {
   );
 }
 
+/**
+ * Mappa i codici errore Firebase Auth in messaggi italiani user-friendly.
+ * @param err - Errore catturato (tipicamente un FirebaseError)
+ * @returns Messaggio di errore localizzato in italiano
+ */
 function mapFirebaseError(err: unknown): string {
   const code = (err as { code?: string })?.code ?? '';
   const map: Record<string, string> = {

@@ -16,6 +16,10 @@ import { watchConfigConverter } from './firestore.converters';
 export class WatchConfigService {
   private fb = inject(FirebaseService);
 
+  /**
+   * Observable real-time di tutte le watch config nella collection.
+   * @returns Observable che emette la lista aggiornata di WatchConfig
+   */
   getConfigs$(): Observable<WatchConfig[]> {
     return new Observable<WatchConfig[]>((subscriber) => {
       const col = collection(this.fb.firestore, 'watchConfigs').withConverter(watchConfigConverter);
@@ -31,6 +35,11 @@ export class WatchConfigService {
     });
   }
 
+  /**
+   * Crea una nuova watch config in Firestore con timestamp server.
+   * @param data - Dati della config (senza id e createdAt)
+   * @param uid - UID dell'utente creatore
+   */
   async create(data: Omit<WatchConfig, 'id' | 'createdAt'>, uid: string): Promise<void> {
     await addDoc(collection(this.fb.firestore, 'watchConfigs'), {
       ...data,
@@ -39,6 +48,10 @@ export class WatchConfigService {
     });
   }
 
+  /**
+   * Elimina una watch config da Firestore.
+   * @param id - ID del documento da eliminare
+   */
   async delete(id: string): Promise<void> {
     await deleteDoc(doc(this.fb.firestore, `watchConfigs/${id}`));
   }

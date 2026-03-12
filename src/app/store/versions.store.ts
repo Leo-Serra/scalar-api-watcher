@@ -45,6 +45,10 @@ export const VersionsStore = signalStore(
     const svc = inject(SpecVersionService);
 
     return {
+      /**
+       * Sottoscrive in real-time le versioni per un configId.
+       * `switchMap` cancella automaticamente la subscription precedente al cambio di config.
+       */
       loadVersions: rxMethod<string>(
         pipe(
           switchMap((configId) => {
@@ -63,6 +67,10 @@ export const VersionsStore = signalStore(
         ),
       ),
 
+      /**
+       * Scarica il JSON della spec da Cloud Storage e lo mostra nella modal overlay.
+       * @param version - La SpecVersion da visualizzare in anteprima
+       */
       async openSpecPreview(version: SpecVersion): Promise<void> {
         patchState(store, { previewVersion: version, previewJson: null, previewLoading: true });
         try {
@@ -77,6 +85,10 @@ export const VersionsStore = signalStore(
         patchState(store, { previewVersion: null, previewJson: null });
       },
 
+      /**
+       * Imposta la config attiva e ricarica le versioni corrispondenti.
+       * @param configId - ID della watch config da attivare
+       */
       setActiveConfig(configId: string): void {
         this.loadVersions(configId);
       },

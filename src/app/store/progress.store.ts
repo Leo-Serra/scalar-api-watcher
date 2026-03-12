@@ -34,6 +34,11 @@ export const ProgressStore = signalStore(
     return {
       lastSeenVersionId: computed(() => state.progress()?.lastSeenVersionId ?? null),
       viewedReports: computed(() => state.progress()?.viewedReports ?? []),
+      /**
+       * Conta le versioni più recenti rispetto a lastSeen.
+       * Le versioni sono ordinate desc (più recente prima), quindi l'indice
+       * di lastSeen corrisponde esattamente al numero di versioni non lette.
+       */
       unreadCount: computed(() => {
         const versions = versionsStore.versions();
         const lastSeen = state.progress()?.lastSeenVersionId;
@@ -48,6 +53,7 @@ export const ProgressStore = signalStore(
     const svc = inject(UserProgressService);
 
     return {
+      /** Sottoscrive in real-time il documento ReadProgress dell'utente per una config. */
       watchProgress: rxMethod<{ uid: string; configId: string }>(
         pipe(
           switchMap(({ uid, configId }) =>
@@ -61,10 +67,22 @@ export const ProgressStore = signalStore(
         ),
       ),
 
+      /**
+       * Aggiorna il bookmark "sei qui" dell'utente per una config.
+       * @param uid - UID dell'utente Firebase
+       * @param configId - ID della watch config
+       * @param versionId - ID della versione da segnare come ultima vista
+       */
       async updateLastSeen(uid: string, configId: string, versionId: string): Promise<void> {
         await svc.updateLastSeen(uid, configId, versionId);
       },
 
+      /**
+       * Segna un report come visto nel progresso dell'utente.
+       * @param uid - UID dell'utente Firebase
+       * @param configId - ID della watch config
+       * @param reportId - ID del report da segnare come visto
+       */
       async markReportViewed(uid: string, configId: string, reportId: string): Promise<void> {
         await svc.markReportViewed(uid, configId, reportId);
       },

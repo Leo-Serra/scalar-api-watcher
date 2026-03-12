@@ -12,6 +12,13 @@ export class DiffReportService {
   private fb = inject(FirebaseService);
   private http = inject(HttpClient);
 
+  /**
+   * Cerca un report per la coppia di versioni. Risolve `changesRef` da Storage se necessario.
+   * @param configId - ID della watch config
+   * @param oldVersionId - ID della versione precedente
+   * @param newVersionId - ID della nuova versione
+   * @returns Il DiffReport completo oppure `null` se non trovato
+   */
   async getReport(
     configId: string,
     oldVersionId: string,
@@ -31,6 +38,11 @@ export class DiffReportService {
     return this.resolveChanges(report);
   }
 
+  /**
+   * Recupera un report per ID documento. Risolve `changesRef` da Storage se necessario.
+   * @param reportId - ID del documento Firestore del report
+   * @returns Il DiffReport completo oppure `null` se non esiste
+   */
   async getReportById(reportId: string): Promise<DiffReport | null> {
     const docRef = doc(this.fb.firestore, 'diffReports', reportId).withConverter(
       diffReportConverter,
@@ -40,6 +52,12 @@ export class DiffReportService {
     return this.resolveChanges(snap.data());
   }
 
+  /**
+   * Se il report non ha `changes` inline, li scarica dal file JSON
+   * referenziato da `changesRef` in Cloud Storage.
+   * @param report - Il report da risolvere
+   * @returns Il report con i `changes` popolati
+   */
   private async resolveChanges(report: DiffReport): Promise<DiffReport> {
     if (report.changes) return report;
     if (report.changesRef) {
