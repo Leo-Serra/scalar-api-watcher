@@ -19,7 +19,7 @@ I design docs (`docs/00-init.md` → `docs/10-settings.md`) definiscono ogni asp
 | Fase | Descrizione | Stato |
 |------|-------------|-------|
 | 1 | Setup, dipendenze, Firebase, Tailwind, routing | ✅ Fatto |
-| 2 | Data Models | ⬜ Da fare |
+| 2 | Data Models | ✅ Fatto |
 | 3 | Diff Engine | ⬜ Da fare |
 | 4 | Cloud Functions | ⬜ Da fare |
 | 5 | Auth Store + Login | ⬜ Da fare |
