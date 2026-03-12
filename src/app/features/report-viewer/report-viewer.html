@@ -1,0 +1,69 @@
+<div class="min-h-screen bg-gray-50 pb-12">
+  <div class="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-4">
+    <a routerLink="/dashboard" class="text-gray-400 hover:text-gray-600 text-sm"
+      >&larr; Dashboard</a
+    >
+    <h1 class="text-lg font-semibold text-gray-900">Report Diff</h1>
+  </div>
+
+  @if (store.loading()) {
+    <div class="text-center py-20 text-gray-400">Caricamento report...</div>
+  }
+
+  @if (store.error()) {
+    <div class="text-center py-20 text-red-400">{{ store.error() }}</div>
+  }
+
+  @if (!store.loading() && store.report()) {
+    <div class="max-w-4xl mx-auto px-6 py-8">
+      @if (store.summary(); as s) {
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+          <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+            <div class="text-3xl font-bold text-green-700">{{ s.endpointsAdded }}</div>
+            <div class="text-xs text-green-600 mt-1">aggiunti</div>
+          </div>
+          <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+            <div class="text-3xl font-bold text-red-700">{{ s.endpointsRemoved }}</div>
+            <div class="text-xs text-red-600 mt-1">rimossi</div>
+          </div>
+          <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+            <div class="text-3xl font-bold text-yellow-700">{{ s.endpointsChanged }}</div>
+            <div class="text-xs text-yellow-600 mt-1">modificati</div>
+          </div>
+          <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
+            <div class="text-3xl font-bold text-orange-700">{{ s.breakingChanges }}</div>
+            <div class="text-xs text-orange-600 mt-1">breaking</div>
+          </div>
+        </div>
+      }
+
+      <div class="flex gap-2 flex-wrap mb-6">
+        @for (f of filterOptions; track f.value) {
+          <button
+            (click)="store.setFilter(f.value)"
+            class="text-sm px-4 py-1.5 rounded-full border transition"
+            [class.bg-blue-600]="store.activeFilter() === f.value"
+            [class.text-white]="store.activeFilter() === f.value"
+            [class.border-blue-600]="store.activeFilter() === f.value"
+            [class.border-gray-300]="store.activeFilter() !== f.value"
+            [class.text-gray-600]="store.activeFilter() !== f.value"
+          >
+            {{ f.label }}
+            <span class="ml-1 opacity-70">({{ store.countByFilter()[f.value] }})</span>
+          </button>
+        }
+      </div>
+
+      <div class="space-y-3">
+        @for (change of store.filteredChanges(); track change.path + change.method) {
+          <app-endpoint-card [change]="change" />
+        }
+        @if (store.filteredChanges().length === 0) {
+          <div class="text-center py-10 text-gray-400 text-sm">
+            Nessun endpoint per questo filtro
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

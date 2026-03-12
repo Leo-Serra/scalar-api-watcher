@@ -1,0 +1,65 @@
+<div
+  class="bg-white rounded-xl border overflow-hidden"
+  [class.border-green-200]="change.type === 'added'"
+  [class.border-red-200]="change.type === 'removed'"
+  [class.border-yellow-200]="change.type === 'modified'"
+>
+  <button
+    class="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 transition"
+    (click)="expanded.set(!expanded())"
+  >
+    <span
+      class="text-xs font-bold px-2 py-0.5 rounded font-mono flex-shrink-0"
+      [class]="methodClass()"
+    >
+      {{ change.method }}
+    </span>
+    <span class="font-mono text-sm text-gray-800 flex-1 truncate">{{ change.path }}</span>
+    @if (change.summary) {
+      <span class="text-xs text-gray-400 hidden md:block truncate max-w-52">{{
+        change.summary
+      }}</span>
+    }
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <span
+        class="text-xs px-2 py-0.5 rounded-full font-medium"
+        [class.bg-green-100]="change.type === 'added'"
+        [class.text-green-700]="change.type === 'added'"
+        [class.bg-red-100]="change.type === 'removed'"
+        [class.text-red-700]="change.type === 'removed'"
+        [class.bg-yellow-100]="change.type === 'modified'"
+        [class.text-yellow-700]="change.type === 'modified'"
+        >{{ change.type }}</span
+      >
+      @if (change.breaking) {
+        <span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">!</span>
+      }
+      <span class="text-gray-400">{{ expanded() ? '▲' : '▼' }}</span>
+    </div>
+  </button>
+
+  @if (expanded() && change.fieldChanges?.length) {
+    <div class="border-t border-gray-100 divide-y divide-gray-50">
+      @for (field of change.fieldChanges!; track field.field) {
+        <div class="px-5 py-3 flex items-start gap-4 text-xs">
+          <span
+            class="font-medium w-16 flex-shrink-0 pt-0.5"
+            [class.text-green-600]="field.type === 'added'"
+            [class.text-red-600]="field.type === 'removed'"
+            [class.text-yellow-600]="field.type === 'modified'"
+            >{{ field.type }}</span
+          >
+          <span class="font-mono text-gray-700 flex-1">{{ field.field }}</span>
+          @if (field.breaking) {
+            <span class="text-orange-500">!</span>
+          }
+          @if (field.oldValue !== undefined) {
+            <span class="text-gray-400 font-mono">
+              {{ field.oldValue | json }} &rarr; {{ field.newValue | json }}
+            </span>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
