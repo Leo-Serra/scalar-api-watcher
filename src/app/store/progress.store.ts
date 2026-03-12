@@ -1,5 +1,12 @@
 import { computed, inject } from '@angular/core';
-import { signalStore, withState, withComputed, withMethods, withHooks, patchState } from '@ngrx/signals';
+import {
+  signalStore,
+  withState,
+  withComputed,
+  withMethods,
+  withHooks,
+  patchState,
+} from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { tapResponse } from '@ngrx/operators';
 import { pipe, switchMap } from 'rxjs';
@@ -48,10 +55,10 @@ export const ProgressStore = signalStore(
               tapResponse({
                 next: (progress) => patchState(store, { progress: progress ?? null }),
                 error: () => patchState(store, { progress: null }),
-              })
-            )
-          )
-        )
+              }),
+            ),
+          ),
+        ),
       ),
 
       async updateLastSeen(uid: string, configId: string, versionId: string): Promise<void> {
@@ -72,5 +79,5 @@ export const ProgressStore = signalStore(
         store.watchProgress({ uid, configId: 'default' });
       }
     },
-  })
+  }),
 );

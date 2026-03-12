@@ -24,7 +24,7 @@ export class UserProgressService {
         (snap) => {
           subscriber.next(snap.exists() ? (snap.data() as ReadProgress) : undefined);
         },
-        (error) => subscriber.error(error)
+        (error) => subscriber.error(error),
       );
       return () => unsubscribe();
     });

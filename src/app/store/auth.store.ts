@@ -93,7 +93,7 @@ export const AuthStore = signalStore(
     onInit(store) {
       store.initAuthListener();
     },
-  })
+  }),
 );
 
 async function saveProfile(fb: FirebaseService, user: User): Promise<void> {
@@ -104,7 +104,7 @@ async function saveProfile(fb: FirebaseService, user: User): Promise<void> {
       displayName: user.displayName ?? user.email?.split('@')[0] ?? 'User',
       lastLogin: serverTimestamp(),
     },
-    { merge: true }
+    { merge: true },
   );
 }
 

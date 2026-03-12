@@ -59,7 +59,7 @@ function endpointKey(path: string, method: string): string {
 }
 
 function extractEndpoints(
-  spec: OpenApiSpec
+  spec: OpenApiSpec,
 ): Map<string, { path: string; method: HttpMethod; op: OperationObject }> {
   const map = new Map<string, { path: string; method: HttpMethod; op: OperationObject }>();
 
@@ -82,7 +82,7 @@ function extractEndpoints(
 
 function diffParameters(
   oldParams: ParameterObject[] = [],
-  newParams: ParameterObject[] = []
+  newParams: ParameterObject[] = [],
 ): FieldChange[] {
   const changes: FieldChange[] = [];
   const oldMap = new Map(oldParams.map((p) => [`${p.in}:${p.name}`, p]));
@@ -135,7 +135,7 @@ function diffParameters(
 function diffSchema(
   oldSchema: Record<string, unknown> | undefined,
   newSchema: Record<string, unknown> | undefined,
-  prefix: string
+  prefix: string,
 ): FieldChange[] {
   const changes: FieldChange[] = [];
   const oldProps = (oldSchema?.['properties'] ?? {}) as Record<string, unknown>;
@@ -192,7 +192,7 @@ function diffSchema(
 // --- Confronto singolo endpoint ---
 
 function getFirstContentSchema(
-  obj: RequestBodyObject | ResponseObject | undefined
+  obj: RequestBodyObject | ResponseObject | undefined,
 ): Record<string, unknown> | undefined {
   if (!obj?.content) return undefined;
   const first = Object.values(obj.content)[0];
@@ -221,10 +221,10 @@ function diffOperation(oldOp: OperationObject, newOp: OperationObject): FieldCha
   }
 
   const oldRespSchema = getFirstContentSchema(
-    oldOp.responses?.['200'] as ResponseObject | undefined
+    oldOp.responses?.['200'] as ResponseObject | undefined,
   );
   const newRespSchema = getFirstContentSchema(
-    newOp.responses?.['200'] as ResponseObject | undefined
+    newOp.responses?.['200'] as ResponseObject | undefined,
   );
   if (oldRespSchema || newRespSchema) {
     changes.push(...diffSchema(oldRespSchema, newRespSchema, 'response.200'));
@@ -240,7 +240,7 @@ export function computeDiff(
   newSpec: OpenApiSpec,
   configId: string,
   oldVersionId: string,
-  newVersionId: string
+  newVersionId: string,
 ): Omit<DiffReport, 'id' | 'generatedAt' | 'changesRef'> {
   const oldEndpoints = extractEndpoints(oldSpec);
   const newEndpoints = extractEndpoints(newSpec);
@@ -264,7 +264,14 @@ export function computeDiff(
     const fieldChanges = diffOperation(old.op, newOp);
     if (fieldChanges.length > 0) {
       const breaking = fieldChanges.some((c) => c.breaking);
-      changes.push({ path, method, type: 'modified', breaking, summary: newOp.summary, fieldChanges });
+      changes.push({
+        path,
+        method,
+        type: 'modified',
+        breaking,
+        summary: newOp.summary,
+        fieldChanges,
+      });
     }
   }
 
@@ -273,9 +280,12 @@ export function computeDiff(
     endpointsRemoved: changes.filter((c) => c.type === 'removed').length,
     endpointsChanged: changes.filter((c) => c.type === 'modified').length,
     breakingChanges: changes.filter((c) => c.breaking).length,
-    fieldsAdded: changes.flatMap((c) => c.fieldChanges ?? []).filter((f) => f.type === 'added').length,
-    fieldsRemoved: changes.flatMap((c) => c.fieldChanges ?? []).filter((f) => f.type === 'removed').length,
-    fieldsChanged: changes.flatMap((c) => c.fieldChanges ?? []).filter((f) => f.type === 'modified').length,
+    fieldsAdded: changes.flatMap((c) => c.fieldChanges ?? []).filter((f) => f.type === 'added')
+      .length,
+    fieldsRemoved: changes.flatMap((c) => c.fieldChanges ?? []).filter((f) => f.type === 'removed')
+      .length,
+    fieldsChanged: changes.flatMap((c) => c.fieldChanges ?? []).filter((f) => f.type === 'modified')
+      .length,
   };
 
   return { configId, oldVersionId, newVersionId, summary, changes };

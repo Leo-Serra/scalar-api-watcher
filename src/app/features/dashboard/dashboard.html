@@ -75,10 +75,9 @@
           @if (versionsStore.previewLoading()) {
             <div class="text-center py-10 text-gray-400">Caricamento spec...</div>
           } @else {
-            <pre
-              class="text-xs text-gray-700 whitespace-pre-wrap font-mono leading-relaxed"
-              >{{ versionsStore.previewJson() | json }}</pre
-            >
+            <pre class="text-xs text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">{{
+              versionsStore.previewJson() | json
+            }}</pre>
           }
         </div>
       </div>

@@ -25,7 +25,7 @@ export class WatchConfigService {
           const configs = snapshot.docs.map((d) => d.data());
           subscriber.next(configs);
         },
-        (error) => subscriber.error(error)
+        (error) => subscriber.error(error),
       );
       return () => unsubscribe();
     });

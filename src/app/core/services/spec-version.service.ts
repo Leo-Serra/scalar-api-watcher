@@ -1,12 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-} from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { Observable, firstValueFrom } from 'rxjs';
 import { FirebaseService } from './firebase.service';
@@ -28,7 +22,7 @@ export class SpecVersionService {
           const versions = snapshot.docs.map((doc) => doc.data());
           subscriber.next(versions);
         },
-        (error) => subscriber.error(error)
+        (error) => subscriber.error(error),
       );
       return () => unsubscribe();
     });

@@ -38,23 +38,26 @@ export const WatchConfigStore = signalStore(
                 next: (configs) => patchState(store, { configs, loading: false }),
                 error: () =>
                   patchState(store, { error: 'Errore caricamento configs', loading: false }),
-              })
+              }),
             );
-          })
-        )
+          }),
+        ),
       ),
 
       async addConfig(
         specUrl: string,
         cronSchedule: string,
         maxHistory: number,
-        extraHeaders: Record<string, string>
+        extraHeaders: Record<string, string>,
       ): Promise<void> {
         const uid = authStore.uid();
         if (!uid) return;
         patchState(store, { saving: true, error: null });
         try {
-          await svc.create({ specUrl, cronSchedule, maxHistory, extraHeaders, createdBy: uid }, uid);
+          await svc.create(
+            { specUrl, cronSchedule, maxHistory, extraHeaders, createdBy: uid },
+            uid,
+          );
         } catch {
           patchState(store, { error: 'Errore nel salvataggio' });
         } finally {
@@ -72,5 +75,5 @@ export const WatchConfigStore = signalStore(
     onInit(store) {
       store.loadConfigs();
     },
-  })
+  }),
 );

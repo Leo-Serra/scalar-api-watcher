@@ -1,5 +1,12 @@
 import { inject, computed } from '@angular/core';
-import { signalStore, withState, withComputed, withMethods, withHooks, patchState } from '@ngrx/signals';
+import {
+  signalStore,
+  withState,
+  withComputed,
+  withMethods,
+  withHooks,
+  patchState,
+} from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { tapResponse } from '@ngrx/operators';
 import { pipe, switchMap } from 'rxjs';
@@ -50,10 +57,10 @@ export const VersionsStore = signalStore(
                     error: 'Errore caricamento versioni',
                     loadingVersions: false,
                   }),
-              })
+              }),
             );
-          })
-        )
+          }),
+        ),
       ),
 
       async openSpecPreview(version: SpecVersion): Promise<void> {
@@ -80,5 +87,5 @@ export const VersionsStore = signalStore(
     onInit(store) {
       store.loadVersions('default');
     },
-  })
+  }),
 );

@@ -54,7 +54,7 @@ export const ReportsStore = signalStore(
       async loadReport(
         configId: string,
         oldVersionId: string,
-        newVersionId: string
+        newVersionId: string,
       ): Promise<void> {
         patchState(store, { loading: true, error: null, report: null });
         try {
@@ -73,5 +73,5 @@ export const ReportsStore = signalStore(
         patchState(store, initialState);
       },
     };
-  })
+  }),
 );

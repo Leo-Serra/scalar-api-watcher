@@ -1,13 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  getDoc,
-} from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { firstValueFrom } from 'rxjs';
 import { FirebaseService } from './firebase.service';
@@ -22,14 +15,14 @@ export class DiffReportService {
   async getReport(
     configId: string,
     oldVersionId: string,
-    newVersionId: string
+    newVersionId: string,
   ): Promise<DiffReport | null> {
     const col = collection(this.fb.firestore, 'diffReports').withConverter(diffReportConverter);
     const q = query(
       col,
       where('configId', '==', configId),
       where('oldVersionId', '==', oldVersionId),
-      where('newVersionId', '==', newVersionId)
+      where('newVersionId', '==', newVersionId),
     );
     const snap = await getDocs(q);
     if (snap.empty) return null;
@@ -40,7 +33,7 @@ export class DiffReportService {
 
   async getReportById(reportId: string): Promise<DiffReport | null> {
     const docRef = doc(this.fb.firestore, 'diffReports', reportId).withConverter(
-      diffReportConverter
+      diffReportConverter,
     );
     const snap = await getDoc(docRef);
     if (!snap.exists()) return null;
