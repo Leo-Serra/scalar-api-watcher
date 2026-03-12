@@ -1,5 +1,11 @@
 import { computed, inject } from '@angular/core';
-import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
+import { signalStore, withState, withComputed, withMethods, withHooks, patchState } from '@ngrx/signals';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { tapResponse } from '@ngrx/operators';
+import { pipe, switchMap } from 'rxjs';
+import { UserProgressService } from '../core/services/user-progress.service';
+import { AuthStore } from './auth.store';
+import { VersionsStore } from './versions.store';
 import { ReadProgress } from '../core/models/user-progress.model';
 
 interface ProgressState {
@@ -15,19 +21,56 @@ export const ProgressStore = signalStore(
     loading: false,
   }),
 
-  withComputed(({ progress }) => ({
-    lastSeenVersionId: computed(() => progress()?.lastSeenVersionId ?? null),
-    viewedReports: computed(() => progress()?.viewedReports ?? []),
-    unreadCount: computed(() => 0), // Will be fully implemented in Phase 8
-  })),
+  withComputed((state) => {
+    const versionsStore = inject(VersionsStore);
 
-  withMethods((store) => ({
-    async updateLastSeen(_uid: string, _configId: string, _versionId: string): Promise<void> {
-      // Will be fully implemented in Phase 8
-    },
+    return {
+      lastSeenVersionId: computed(() => state.progress()?.lastSeenVersionId ?? null),
+      viewedReports: computed(() => state.progress()?.viewedReports ?? []),
+      unreadCount: computed(() => {
+        const versions = versionsStore.versions();
+        const lastSeen = state.progress()?.lastSeenVersionId;
+        if (!lastSeen) return versions.length;
+        const idx = versions.findIndex((v) => v.id === lastSeen);
+        return idx === -1 ? versions.length : idx;
+      }),
+    };
+  }),
 
-    async markReportViewed(_uid: string, _configId: string, _reportId: string): Promise<void> {
-      // Will be fully implemented in Phase 8
+  withMethods((store) => {
+    const svc = inject(UserProgressService);
+
+    return {
+      watchProgress: rxMethod<{ uid: string; configId: string }>(
+        pipe(
+          switchMap(({ uid, configId }) =>
+            svc.getProgress$(uid, configId).pipe(
+              tapResponse({
+                next: (progress) => patchState(store, { progress: progress ?? null }),
+                error: () => patchState(store, { progress: null }),
+              })
+            )
+          )
+        )
+      ),
+
+      async updateLastSeen(uid: string, configId: string, versionId: string): Promise<void> {
+        await svc.updateLastSeen(uid, configId, versionId);
+      },
+
+      async markReportViewed(uid: string, configId: string, reportId: string): Promise<void> {
+        await svc.markReportViewed(uid, configId, reportId);
+      },
+    };
+  }),
+
+  withHooks({
+    onInit(store) {
+      const authStore = inject(AuthStore);
+      const uid = authStore.uid();
+      if (uid) {
+        store.watchProgress({ uid, configId: 'default' });
+      }
     },
-  }))
+  })
 );

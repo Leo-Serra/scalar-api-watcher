@@ -25,7 +25,7 @@ I design docs (`docs/00-init.md` → `docs/10-settings.md`) definiscono ogni asp
 | 5 | Auth Store + Login | ✅ Fatto |
 | 6 | Versions Store + Dashboard | ✅ Fatto |
 | 7 | Reports Store + Report Viewer | ✅ Fatto |
-| 8 | Progress Store | ⬜ Da fare |
+| 8 | Progress Store | ✅ Fatto |
 | 9 | Settings / Watch Config | ⬜ Da fare |
 | 10 | Integrazione & Polish | ⬜ Da fare |
 
