@@ -1,0 +1,87 @@
+<div class="min-h-screen bg-gray-50">
+  <nav class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+    <span class="font-semibold text-gray-900">API Watcher</span>
+    <div class="flex items-center gap-4">
+      <span class="text-sm text-gray-500">{{ authStore.email() }}</span>
+      <button
+        (click)="authStore.logout()"
+        class="text-sm text-gray-500 hover:text-red-600 transition"
+      >
+        Esci
+      </button>
+    </div>
+  </nav>
+
+  <div class="max-w-4xl mx-auto px-6 py-8">
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Timeline versioni</h1>
+        <p class="text-gray-500 text-sm mt-1">
+          {{ progressStore.unreadCount() }} versioni non viste
+        </p>
+      </div>
+      <a
+        routerLink="/settings"
+        class="text-sm text-blue-600 border border-blue-200 rounded-lg px-4 py-2"
+      >
+        Impostazioni
+      </a>
+    </div>
+
+    @if (versionsStore.loadingVersions()) {
+      <div class="text-center py-20 text-gray-400">Caricamento versioni...</div>
+    }
+
+    @if (!versionsStore.loadingVersions() && versionsStore.hasVersions()) {
+      <app-version-timeline
+        [versions]="versionsStore.versions()"
+        [lastSeenVersionId]="progressStore.lastSeenVersionId()"
+        [viewedReports]="progressStore.viewedReports()"
+        (viewSpec)="versionsStore.openSpecPreview($event)"
+        (viewDiff)="onViewDiff($event)"
+        (markAsRead)="onMarkAsRead($event)"
+      />
+    }
+
+    @if (!versionsStore.loadingVersions() && !versionsStore.hasVersions()) {
+      <div class="text-center py-20 text-gray-400">Nessuna versione rilevata ancora.</div>
+    }
+  </div>
+
+  @if (versionsStore.previewVersion()) {
+    <div
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      (click)="versionsStore.closeSpecPreview()"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+          <h2 class="font-semibold text-gray-900">
+            {{ versionsStore.previewVersion()!.title }}
+            <span class="text-gray-400 font-normal ml-2"
+              >v{{ versionsStore.previewVersion()!.version }}</span
+            >
+          </h2>
+          <button
+            (click)="versionsStore.closeSpecPreview()"
+            class="text-gray-400 hover:text-gray-600 text-xl"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="overflow-auto flex-1 p-4 bg-gray-50 rounded-b-2xl">
+          @if (versionsStore.previewLoading()) {
+            <div class="text-center py-10 text-gray-400">Caricamento spec...</div>
+          } @else {
+            <pre
+              class="text-xs text-gray-700 whitespace-pre-wrap font-mono leading-relaxed"
+              >{{ versionsStore.previewJson() | json }}</pre
+            >
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>
