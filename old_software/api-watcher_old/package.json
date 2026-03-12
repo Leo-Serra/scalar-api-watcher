@@ -1,0 +1,16 @@
+{
+  "name": "api-watcher",
+  "version": "1.0.0",
+  "description": "Scalar/OpenAPI spec watcher - auto diff & history",
+  "main": "src/watcher.js",
+  "scripts": {
+    "start": "node src/watcher.js",
+    "dashboard": "node src/dashboard.js",
+    "diff": "node src/cli-diff.js"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0"
+  }
+}

@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Diff — Scalar Comparator</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0f12;
+    --surface: #13161b;
+    --surface2: #1a1e26;
+    --border: #252932;
+    --border2: #2e3440;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --accent: #38bdf8;
+    --added: #22c55e;
+    --added-bg: #052e16;
+    --added-line: #14532d;
+    --removed: #f87171;
+    --removed-bg: #2d0a0a;
+    --removed-line: #450a0a;
+    --changed: #fbbf24;
+    --changed-bg: #1c1408;
+    --changed-line: #3d2800;
+    --breaking: #f43f5e;
+    --breaking-bg: #2d0a14;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border2);
+    background: linear-gradient(180deg, rgba(13,15,18,0.98) 0%, rgba(13,15,18,0.8) 100%);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .logo span {
+    color: var(--accent);
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  .main {
+    position: relative;
+    z-index: 5;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 32px;
+  }
+
+  /* Input section */
+  .input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .input-panel {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .input-panel:focus-within {
+    border-color: var(--accent);
+  }
+
+  .panel-header {
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .panel-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--removed);
+  }
+
+  .dot.new { background: var(--added); }
+
+  .panel-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-small {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-small:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .code-input {
+    width: 100%;
+    height: 280px;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text);
+    resize: none;
+  }
+
+  .code-input::placeholder { color: var(--muted); opacity: 0.5; }
+
+  /* Upload zone */
+  .upload-zone {
+    display: none;
+    padding: 28px 16px;
+    text-align: center;
+    border-top: 1px solid var(--border2);
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 12px;
+    transition: background 0.2s;
+  }
+
+  .upload-zone:hover { background: var(--surface2); }
+
+  .upload-input { display: none; }
+
+  .actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .btn-compare {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 36px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #0d0f12;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-compare:hover {
+    background: #7dd3fc;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(56,189,248,0.25);
+  }
+
+  .btn-clear {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-clear:hover { border-color: var(--muted); color: var(--text); }
+
+  /* Summary bar */
+  .summary-bar {
+    display: none;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    animation: slideDown 0.3s ease;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .summary-chip {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chip-added { color: var(--added); border-color: var(--added-line); background: var(--added-bg); }
+  .chip-removed { color: var(--removed); border-color: var(--removed-line); background: var(--removed-bg); }
+  .chip-changed { color: var(--changed); border-color: var(--changed-line); background: var(--changed-bg); }
+  .chip-breaking { color: var(--breaking); border-color: #881337; background: var(--breaking-bg); }
+
+  /* Filter bar */
+  .filter-bar {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .filter-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+
+  .filter-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(56,189,248,0.08);
+  }
+
+  /* Results */
+  .results { display: none; }
+
+  .endpoint-group {
+    margin-bottom: 16px;
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    overflow: hidden;
+    animation: fadeIn 0.25s ease both;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .endpoint-header {
+    padding: 14px 18px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+
+  .endpoint-header:hover { background: #1e2330; }
+
+  .method-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    min-width: 52px;
+    text-align: center;
+  }
+
+  .method-GET { background: #0c2a1a; color: #4ade80; border: 1px solid #14532d; }
+  .method-POST { background: #0c1d2a; color: #38bdf8; border: 1px solid #0c4a6e; }
+  .method-PUT { background: #2a1c0c; color: #fbbf24; border: 1px solid #451a03; }
+  .method-PATCH { background: #1e1a0c; color: #fcd34d; border: 1px solid #3d2800; }
+  .method-DELETE { background: #2a0c0c; color: #f87171; border: 1px solid #450a0a; }
+
+  .endpoint-path {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .change-badges {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-added { background: var(--added-line); color: var(--added); }
+  .badge-removed { background: var(--removed-line); color: var(--removed); }
+  .badge-changed { background: var(--changed-line); color: var(--changed); }
+  .badge-breaking { background: #881337; color: #fda4af; }
+  .badge-new-endpoint { background: var(--added-line); color: var(--added); }
+  .badge-deleted-endpoint { background: var(--removed-line); color: var(--removed); }
+
+  .chevron {
+    color: var(--muted);
+    font-size: 12px;
+    transition: transform 0.2s;
+  }
+
+  .endpoint-group.open .chevron { transform: rotate(90deg); }
+
+  .endpoint-body {
+    display: none;
+    border-top: 1px solid var(--border2);
+  }
+
+  .endpoint-group.open .endpoint-body { display: block; }
+
+  /* Diff table */
+  .diff-section {
+    padding: 0;
+  }
+
+  .diff-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 18px 8px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+  }
+
+  .diff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+
+  .diff-table thead tr {
+    background: var(--surface);
+  }
+
+  .diff-table th {
+    padding: 8px 16px;
+    text-align: left;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .col-old { width: 50%; border-right: 1px solid var(--border2); }
+  .col-new { width: 50%; }
+
+  .diff-row { border-bottom: 1px solid var(--border); }
+  .diff-row:last-child { border-bottom: none; }
+
+  .diff-cell {
+    padding: 9px 16px;
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .diff-cell.old {
+    background: var(--removed-bg);
+    border-right: 3px solid var(--removed);
+  }
+
+  .diff-cell.new {
+    background: var(--added-bg);
+    border-left: 0;
+    border-right: 3px solid var(--added);
+  }
+
+  .diff-cell.unchanged {
+    background: var(--surface);
+    border-right: 1px solid var(--border2);
+  }
+
+  .diff-cell.empty {
+    background: #0d0f12;
+    opacity: 0.5;
+  }
+
+  .field-name {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .field-type {
+    color: var(--changed);
+  }
+
+  .field-required {
+    color: #a78bfa;
+    font-size: 10px;
+    margin-left: 6px;
+  }
+
+  .diff-prefix {
+    display: inline-block;
+    width: 14px;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  .prefix-old { color: var(--removed); }
+  .prefix-new { color: var(--added); }
+  .prefix-same { color: var(--muted); }
+
+  .breaking-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--breaking);
+    background: var(--breaking-bg);
+    border: 1px solid #881337;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-left: 8px;
+    font-family: var(--mono);
+    letter-spacing: 0.5px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 80px 32px;
+    color: var(--muted);
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .empty-desc {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .error-box {
+    background: var(--removed-bg);
+    border: 1px solid var(--removed-line);
+    border-radius: 8px;
+    padding: 16px 20px;
+    color: var(--removed);
+    font-family: var(--mono);
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  /* No changes */
+  .no-changes {
+    padding: 20px 18px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  @media (max-width: 900px) {
+    .input-grid { grid-template-columns: 1fr; }
+    .main { padding: 16px; }
+    .diff-table { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">api<span>diff</span></div>
+  <div class="tag">SCALAR / OPENAPI</div>
+</header>
+
+<div class="main">
+
+  <div class="input-grid">
+    <div class="input-panel" id="panelOld">
+      <div class="panel-header">
+        <div class="panel-label"><span class="dot"></span> VERSIONE PRECEDENTE</div>
+        <div class="panel-actions">
+          <button class="btn-small" onclick="triggerUpload('old')">↑ Carica file</button>
+          <button class="btn-small" onclick="loadExample('old')">Esempio</button>
+        </div>
+      </div>
+      <textarea class="code-input" id="inputOld" placeholder='Incolla qui il JSON o YAML della versione precedente...'></textarea>
+      <input type="file" id="fileOld" class="upload-input" accept=".json,.yaml,.yml" onchange="loadFile(event,'old')">
+    </div>
+
+    <div class="input-panel" id="panelNew">
+      <div class="panel-header">
+        <div class="panel-label"><span class="dot new"></span> VERSIONE NUOVA</div>
+        <div class="panel-actions">
+          <button class="btn-small" onclick="triggerUpload('new')">↑ Carica file</button>
+          <button class="btn-small" onclick="loadExample('new')">Esempio</button>
+        </div>
+      </div>
+      <textarea class="code-input" id="inputNew" placeholder='Incolla qui il JSON o YAML della nuova versione...'></textarea>
+      <input type="file" id="fileNew" class="upload-input" accept=".json,.yaml,.yml" onchange="loadFile(event,'new')">
+    </div>
+  </div>
+
+  <div class="actions-row">
+    <button class="btn-compare" onclick="compare()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+      Confronta
+    </button>
+    <button class="btn-clear" onclick="clearAll()">Pulisci</button>
+  </div>
+
+  <div id="errorBox" class="error-box" style="display:none"></div>
+
+  <div class="summary-bar" id="summaryBar">
+    <span class="summary-chip chip-added" id="chipAdded"></span>
+    <span class="summary-chip chip-removed" id="chipRemoved"></span>
+    <span class="summary-chip chip-changed" id="chipChanged"></span>
+    <span class="summary-chip chip-breaking" id="chipBreaking"></span>
+  </div>
+
+  <div class="filter-bar" id="filterBar">
+    <span class="filter-label">Filtra:</span>
+    <button class="filter-btn active" onclick="setFilter('all', this)">Tutti</button>
+    <button class="filter-btn" onclick="setFilter('added', this)">➕ Aggiunti</button>
+    <button class="filter-btn" onclick="setFilter('removed', this)">➖ Rimossi</button>
+    <button class="filter-btn" onclick="setFilter('changed', this)">✏️ Modificati</button>
+    <button class="filter-btn" onclick="setFilter('breaking', this)">⚠️ Breaking</button>
+  </div>
+
+  <div class="results" id="results"></div>
+
+</div>
+
+<script>
+let currentFilter = 'all';
+let lastDiffData = [];
+
+function triggerUpload(side) {
+  document.getElementById('file' + (side === 'old' ? 'Old' : 'New')).click();
+}
+
+function loadFile(event, side) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('input' + (side === 'old' ? 'Old' : 'New')).value = e.target.result;
+  };
+  reader.readAsText(file);
+}
+
+function parseSpec(text) {
+  text = text.trim();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    try {
+      return jsyaml.load(text);
+    } catch (e) {
+      throw new Error('Formato non valido. Usa JSON o YAML valido.\n' + e.message);
+    }
+  }
+}
+
+function getEndpoints(spec) {
+  const endpoints = {};
+  const paths = spec.paths || {};
+  for (const [path, methods] of Object.entries(paths)) {
+    for (const [method, op] of Object.entries(methods)) {
+      if (['get','post','put','patch','delete','options','head'].includes(method.toLowerCase())) {
+        endpoints[`${method.toUpperCase()} ${path}`] = op;
+      }
+    }
+  }
+  return endpoints;
+}
+
+function flattenSchema(schema, prefix = '', specs = null, visited = new Set()) {
+  if (!schema) return {};
+  const fields = {};
+
+  // resolve $ref
+  if (schema['$ref'] && specs) {
+    const refPath = schema['$ref'].replace('#/', '').split('/');
+    let resolved = specs;
+    for (const part of refPath) resolved = resolved?.[part];
+    if (resolved && !visited.has(schema['$ref'])) {
+      visited = new Set([...visited, schema['$ref']]);
+      return flattenSchema(resolved, prefix, specs, visited);
+    }
+    return { [prefix || '$ref']: { type: schema['$ref'].split('/').pop(), required: false, description: '' } };
+  }
+
+  if (schema.type === 'object' || schema.properties) {
+    const props = schema.properties || {};
+    const required = schema.required || [];
+    for (const [k, v] of Object.entries(props)) {
+      const key = prefix ? `${prefix}.${k}` : k;
+      if (v.type === 'object' || v.properties || v.$ref) {
+        Object.assign(fields, flattenSchema(v, key, specs, visited));
+      } else if (v.type === 'array') {
+        const itemType = v.items?.type || (v.items?.$ref ? v.items.$ref.split('/').pop() : 'object');
+        fields[key] = { type: `array<${itemType}>`, required: required.includes(k), description: v.description || '' };
+        if (v.items && (v.items.type === 'object' || v.items.properties)) {
+          Object.assign(fields, flattenSchema(v.items, key + '[]', specs, visited));
+        }
+      } else {
+        fields[key] = { type: v.type || (v.enum ? 'enum' : 'any'), required: required.includes(k), description: v.description || '' };
+      }
+    }
+  } else if (schema.type) {
+    const key = prefix || 'value';
+    fields[key] = { type: schema.type, required: false, description: schema.description || '' };
+  }
+
+  if (schema.allOf || schema.anyOf || schema.oneOf) {
+    const combined = schema.allOf || schema.anyOf || schema.oneOf;
+    for (const sub of combined) {
+      Object.assign(fields, flattenSchema(sub, prefix, specs, visited));
+    }
+  }
+
+  return fields;
+}
+
+function getBodySchema(op, specs) {
+  // OpenAPI 3
+  if (op.requestBody) {
+    const content = op.requestBody.content || {};
+    for (const ct of Object.values(content)) {
+      if (ct.schema) return flattenSchema(ct.schema, '', specs);
+    }
+  }
+  // OpenAPI 2
+  if (op.parameters) {
+    for (const p of op.parameters) {
+      if (p.in === 'body' && p.schema) return flattenSchema(p.schema, '', specs);
+    }
+  }
+  return {};
+}
+
+function getResponseSchema(op, specs) {
+  const responses = op.responses || {};
+  // prefer 200 or 201
+  for (const code of ['200','201','default']) {
+    const resp = responses[code];
+    if (!resp) continue;
+    // OA3
+    if (resp.content) {
+      for (const ct of Object.values(resp.content)) {
+        if (ct.schema) return flattenSchema(ct.schema, '', specs);
+      }
+    }
+    // OA2
+    if (resp.schema) return flattenSchema(resp.schema, '', specs);
+  }
+  return {};
+}
+
+function getQueryParams(op) {
+  const params = {};
+  for (const p of (op.parameters || [])) {
+    if (p.in === 'query' || p.in === 'path' || p.in === 'header') {
+      params[`${p.in}:${p.name}`] = { type: p.schema?.type || p.type || 'string', required: !!p.required, description: p.description || '' };
+    }
+  }
+  return params;
+}
+
+function diffFields(oldFields, newFields) {
+  const rows = [];
+  const allKeys = new Set([...Object.keys(oldFields), ...Object.keys(newFields)]);
+
+  for (const key of [...allKeys].sort()) {
+    const o = oldFields[key];
+    const n = newFields[key];
+
+    if (o && !n) {
+      rows.push({ type: 'removed', key, old: o, new: null });
+    } else if (!o && n) {
+      rows.push({ type: 'added', key, old: null, new: n });
+    } else if (o && n) {
+      const changed = o.type !== n.type || o.required !== n.required;
+      if (changed) {
+        const isBreaking = (o.required === false && n.required === true) ||
+          (o.type !== n.type);
+        rows.push({ type: 'changed', key, old: o, new: n, breaking: isBreaking });
+      }
+    }
+  }
+  return rows;
+}
+
+function isBreakingChange(diff) {
+  return diff.some(r => r.type === 'removed' || (r.type === 'changed' && r.breaking));
+}
+
+function renderFieldValue(field, prefix, prefixClass) {
+  if (!field) return `<span style="color:var(--muted);font-style:italic">—</span>`;
+  return `<span class="diff-prefix ${prefixClass}">${prefix}</span><span class="field-name">${''}</span><span class="field-type">${field.type}</span>${field.required ? '<span class="field-required">required</span>' : ''}`;
+}
+
+function renderDiffSection(title, rows) {
+  if (!rows.length) return '';
+  let html = `<div class="diff-section-title">${title}</div>`;
+  html += `<table class="diff-table"><thead><tr>
+    <th class="col-old">⟵ Precedente</th>
+    <th class="col-new">Nuova ⟶</th>
+  </tr></thead><tbody>`;
+
+  for (const row of rows) {
+    if (row.type === 'removed') {
+      html += `<tr class="diff-row">
+        <td class="diff-cell old"><span class="diff-prefix prefix-old">−</span><span class="field-name">${row.key}</span>: <span class="field-type">${row.old.type}</span>${row.old.required ? '<span class="field-required">required</span>' : ''}</td>
+        <td class="diff-cell empty"></td>
+      </tr>`;
+    } else if (row.type === 'added') {
+      html += `<tr class="diff-row">
+        <td class="diff-cell empty"></td>
+        <td class="diff-cell new"><span class="diff-prefix prefix-new">+</span><span class="field-name">${row.key}</span>: <span class="field-type">${row.new.type}</span>${row.new.required ? '<span class="field-required">required</span>' : ''}</td>
+      </tr>`;
+    } else if (row.type === 'changed') {
+      html += `<tr class="diff-row">
+        <td class="diff-cell old"><span class="diff-prefix prefix-old">−</span><span class="field-name">${row.key}</span>: <span class="field-type">${row.old.type}</span>${row.old.required ? '<span class="field-required">required</span>' : ''}${row.breaking ? '<span class="breaking-warning">⚠ breaking</span>' : ''}</td>
+        <td class="diff-cell new"><span class="diff-prefix prefix-new">+</span><span class="field-name">${row.key}</span>: <span class="field-type">${row.new.type}</span>${row.new.required ? '<span class="field-required">required</span>' : ''}</td>
+      </tr>`;
+    }
+  }
+
+  html += `</tbody></table>`;
+  return html;
+}
+
+function compare() {
+  const oldText = document.getElementById('inputOld').value;
+  const newText = document.getElementById('inputNew').value;
+  const errorBox = document.getElementById('errorBox');
+  errorBox.style.display = 'none';
+
+  let oldSpec, newSpec;
+  try { oldSpec = parseSpec(oldText); } catch(e) { showError('Versione precedente: ' + e.message); return; }
+  try { newSpec = parseSpec(newText); } catch(e) { showError('Versione nuova: ' + e.message); return; }
+  if (!oldSpec) { showError('Incolla una spec OpenAPI nella versione precedente.'); return; }
+  if (!newSpec) { showError('Incolla una spec OpenAPI nella versione nuova.'); return; }
+
+  const oldEndpoints = getEndpoints(oldSpec);
+  const newEndpoints = getEndpoints(newSpec);
+
+  const allKeys = new Set([...Object.keys(oldEndpoints), ...Object.keys(newEndpoints)]);
+  const diffResults = [];
+
+  for (const key of [...allKeys].sort()) {
+    const [method, ...pathParts] = key.split(' ');
+    const path = pathParts.join(' ');
+    const oldOp = oldEndpoints[key];
+    const newOp = newEndpoints[key];
+
+    if (oldOp && !newOp) {
+      diffResults.push({ key, method, path, status: 'removed', breaking: true, sections: [] });
+      continue;
+    }
+    if (!oldOp && newOp) {
+      diffResults.push({ key, method, path, status: 'added', breaking: false, sections: [] });
+      continue;
+    }
+
+    // Both exist — diff fields
+    const bodyDiff = diffFields(getBodySchema(oldOp, oldSpec), getBodySchema(newOp, newSpec));
+    const responseDiff = diffFields(getResponseSchema(oldOp, oldSpec), getResponseSchema(newOp, newSpec));
+    const paramsDiff = diffFields(getQueryParams(oldOp), getQueryParams(newOp));
+
+    const allDiffs = [...bodyDiff, ...responseDiff, ...paramsDiff];
+    if (allDiffs.length === 0) continue;
+
+    const breaking = isBreakingChange(allDiffs);
+    const hasAdded = allDiffs.some(r => r.type === 'added');
+    const hasRemoved = allDiffs.some(r => r.type === 'removed');
+    const hasChanged = allDiffs.some(r => r.type === 'changed');
+
+    diffResults.push({
+      key, method, path, status: 'changed', breaking,
+      hasAdded, hasRemoved, hasChanged,
+      sections: [
+        { title: '📥 Request Body', rows: bodyDiff },
+        { title: '📤 Response', rows: responseDiff },
+        { title: '🔗 Parametri (query/path/header)', rows: paramsDiff },
+      ].filter(s => s.rows.length > 0)
+    });
+  }
+
+  lastDiffData = diffResults;
+  renderResults(diffResults);
+}
+
+function renderResults(data) {
+  const summary = {
+    added: data.filter(d => d.status === 'added').length + data.filter(d => d.hasAdded).reduce((a, d) => a, 0),
+    removed: data.filter(d => d.status === 'removed').length,
+    changed: data.filter(d => d.status === 'changed').length,
+    breaking: data.filter(d => d.breaking).length
+  };
+
+  // recount fields
+  let fieldAdded = 0, fieldRemoved = 0, fieldChanged = 0;
+  data.forEach(d => {
+    (d.sections || []).forEach(s => {
+      s.rows.forEach(r => {
+        if (r.type === 'added') fieldAdded++;
+        if (r.type === 'removed') fieldRemoved++;
+        if (r.type === 'changed') fieldChanged++;
+      });
+    });
+  });
+
+  const chipAdded = document.getElementById('chipAdded');
+  const chipRemoved = document.getElementById('chipRemoved');
+  const chipChanged = document.getElementById('chipChanged');
+  const chipBreaking = document.getElementById('chipBreaking');
+
+  chipAdded.innerHTML = `➕ ${data.filter(d=>d.status==='added').length} endpoint aggiunti, ${fieldAdded} campi`;
+  chipRemoved.innerHTML = `➖ ${data.filter(d=>d.status==='removed').length} endpoint rimossi, ${fieldRemoved} campi`;
+  chipChanged.innerHTML = `✏️ ${data.filter(d=>d.status==='changed').length} endpoint modificati, ${fieldChanged} campi`;
+  chipBreaking.innerHTML = `⚠️ ${summary.breaking} breaking changes`;
+
+  document.getElementById('summaryBar').style.display = 'flex';
+  document.getElementById('filterBar').style.display = 'flex';
+  document.getElementById('results').style.display = 'block';
+
+  renderFiltered(data, currentFilter);
+}
+
+function renderFiltered(data, filter) {
+  const container = document.getElementById('results');
+
+  let filtered = data;
+  if (filter === 'added') filtered = data.filter(d => d.status === 'added' || d.hasAdded);
+  if (filter === 'removed') filtered = data.filter(d => d.status === 'removed' || d.hasRemoved);
+  if (filter === 'changed') filtered = data.filter(d => d.status === 'changed');
+  if (filter === 'breaking') filtered = data.filter(d => d.breaking);
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">Nessun risultato</div>
+      <div class="empty-desc">Nessuna differenza trovata con questo filtro.<br>Prova a cambiare il filtro o le spec.</div>
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  filtered.forEach((d, i) => {
+    const delay = i * 30;
+    let badges = '';
+    if (d.status === 'added') badges += `<span class="badge badge-new-endpoint">NUOVO ENDPOINT</span>`;
+    if (d.status === 'removed') badges += `<span class="badge badge-deleted-endpoint">ELIMINATO</span>`;
+    if (d.breaking) badges += `<span class="badge badge-breaking">⚠ BREAKING</span>`;
+    if (d.hasAdded) badges += `<span class="badge badge-added">+campi</span>`;
+    if (d.hasRemoved) badges += `<span class="badge badge-removed">−campi</span>`;
+    if (d.hasChanged) badges += `<span class="badge badge-changed">~tipo</span>`;
+
+    let bodyHtml = '';
+    if (d.status === 'added') {
+      bodyHtml = `<div class="no-changes" style="color:var(--added)">✓ Nuovo endpoint aggiunto</div>`;
+    } else if (d.status === 'removed') {
+      bodyHtml = `<div class="no-changes" style="color:var(--removed)">✗ Endpoint rimosso — possibile breaking change</div>`;
+    } else {
+      (d.sections || []).forEach(s => {
+        bodyHtml += renderDiffSection(s.title, s.rows);
+      });
+      if (!bodyHtml) bodyHtml = `<div class="no-changes">Nessuna differenza nei campi</div>`;
+    }
+
+    html += `<div class="endpoint-group" style="animation-delay:${delay}ms" data-status="${d.status}" data-breaking="${d.breaking}">
+      <div class="endpoint-header" onclick="toggleGroup(this)">
+        <span class="method-badge method-${d.method}">${d.method}</span>
+        <span class="endpoint-path">${d.path}</span>
+        <div class="change-badges">${badges}</div>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="endpoint-body">${bodyHtml}</div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function toggleGroup(header) {
+  const group = header.closest('.endpoint-group');
+  group.classList.toggle('open');
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFiltered(lastDiffData, filter);
+}
+
+function clearAll() {
+  document.getElementById('inputOld').value = '';
+  document.getElementById('inputNew').value = '';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('summaryBar').style.display = 'none';
+  document.getElementById('filterBar').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'none';
+  lastDiffData = [];
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = '✗ ' + msg;
+  box.style.display = 'block';
+}
+
+function loadExample(side) {
+  const oldExample = {
+    openapi: "3.0.0",
+    info: { title: "Esempio API", version: "1.0.0" },
+    paths: {
+      "/users/{id}": {
+        get: {
+          parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["id", "email"],
+                    properties: {
+                      id: { type: "string" },
+                      email: { type: "string" },
+                      name: { type: "string" },
+                      age: { type: "integer" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/users": {
+        post: {
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["email"],
+                  properties: {
+                    email: { type: "string" },
+                    name: { type: "string" },
+                    role: { type: "string" }
+                  }
+                }
+              }
+            }
+          },
+          responses: { "201": { description: "Created" } }
+        }
+      },
+      "/products": {
+        get: {
+          responses: { "200": { description: "OK" } }
+        }
+      }
+    }
+  };
+
+  const newExample = {
+    openapi: "3.0.0",
+    info: { title: "Esempio API", version: "2.0.0" },
+    paths: {
+      "/users/{id}": {
+        get: {
+          parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+          responses: {
+            "200": {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["id", "email", "name"],
+                    properties: {
+                      id: { type: "integer" },
+                      email: { type: "string" },
+                      name: { type: "string" },
+                      phone: { type: "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/users": {
+        post: {
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["email", "name"],
+                  properties: {
+                    email: { type: "string" },
+                    name: { type: "string" },
+                    role: { type: "string" },
+                    department: { type: "string" }
+                  }
+                }
+              }
+            }
+          },
+          responses: { "201": { description: "Created" } }
+        }
+      },
+      "/orders": {
+        get: {
+          responses: { "200": { description: "OK" } }
+        }
+      }
+    }
+  };
+
+  if (side === 'old') {
+    document.getElementById('inputOld').value = JSON.stringify(oldExample, null, 2);
+  } else {
+    document.getElementById('inputNew').value = JSON.stringify(newExample, null, 2);
+  }
+}
+</script>
+</body>
+</html>
