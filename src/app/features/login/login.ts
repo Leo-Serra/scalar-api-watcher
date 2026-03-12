@@ -14,6 +14,7 @@ export class LoginComponent {
   email = '';
   password = '';
 
+  /** Avvia il login con email/password se entrambi i campi sono compilati. */
   loginEmail(): void {
     if (this.email && this.password) {
       this.store.loginWithEmail(this.email, this.password);
