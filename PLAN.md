@@ -1,6 +1,6 @@
 ---
 name: Piano di sviluppo API Watcher
-description: Piano completo di implementazione in 10 fasi per il port Angular 21 + Firebase + NgRx Signal Store. Include stato di avanzamento per ogni fase.
+description: Piano completo di implementazione in 10+3 fasi per il port Angular 21 + Firebase + NgRx Signal Store. Fasi 1-10 completate (architettura originale). Fasi 11-13 per la migrazione a multi-tenant URL-based.
 type: project
 ---
 
@@ -10,279 +10,268 @@ type: project
 
 Port di un tool Node.js CLI (in `old_software/`) verso un'app Angular 21 + Firebase + NgRx Signal Store. L'app monitora API specs OpenAPI, rileva cambiamenti, genera diff reports e traccia il progresso di lettura dell'utente. Il progetto è un greenfield Angular 21 — solo lo skeleton CLI è stato scaffoldato.
 
-I design docs (`docs/00-init.md` → `docs/10-settings.md`) definiscono ogni aspetto dell'implementazione.
+I design docs (`docs/00-init.md` → `docs/10-settings.md`) definiscono l'implementazione originale.
+Il design doc della migrazione multi-tenant: `docs/superpowers/specs/2026-03-13-multi-tenant-url-based-design.md`.
 
 ---
 
 ## Stato Avanzamento
 
-| Fase | Descrizione                                    | Stato    |
-| ---- | ---------------------------------------------- | -------- |
-| 1    | Setup, dipendenze, Firebase, Tailwind, routing | ✅ Fatto |
-| 2    | Data Models                                    | ✅ Fatto |
-| 3    | Diff Engine                                    | ✅ Fatto |
-| 4    | Cloud Functions                                | ✅ Fatto |
-| 5    | Auth Store + Login                             | ✅ Fatto |
-| 6    | Versions Store + Dashboard                     | ✅ Fatto |
-| 7    | Reports Store + Report Viewer                  | ✅ Fatto |
-| 8    | Progress Store                                 | ✅ Fatto |
-| 9    | Settings / Watch Config                        | ✅ Fatto |
-| 10   | Integrazione & Polish                          | ✅ Fatto |
+| Fase | Descrizione                                    | Stato      |
+| ---- | ---------------------------------------------- | ---------- |
+| 1    | Setup, dipendenze, Firebase, Tailwind, routing | ✅ Fatto   |
+| 2    | Data Models                                    | ✅ Fatto   |
+| 3    | Diff Engine                                    | ✅ Fatto   |
+| 4    | Cloud Functions                                | ✅ Fatto   |
+| 5    | Auth Store + Login                             | ✅ Fatto   |
+| 6    | Versions Store + Dashboard                     | ✅ Fatto   |
+| 7    | Reports Store + Report Viewer                  | ✅ Fatto   |
+| 8    | Progress Store                                 | ✅ Fatto   |
+| 9    | Settings / Watch Config                        | ✅ Fatto   |
+| 10   | Integrazione & Polish                          | ✅ Fatto   |
+| 11   | Migrazione Data Model + Firestore              | ⬜ Da fare |
+| 12   | Migrazione Cloud Function                      | ⬜ Da fare |
+| 13   | Migrazione Frontend (Stores + UI)              | ⬜ Da fare |
 
 ---
 
-## Fase 1 — Setup & Dipendenze (`docs/00-init.md`, `docs/01-setup.md`, `docs/02-firebase-config.md`)
+## Fasi 1-10 — Architettura Originale
 
-### 1.1 Installare dipendenze frontend
-
-```
-npm install firebase @angular/fire @ngrx/signals @ngrx/operators
-npm install -D tailwindcss postcss autoprefixer
-```
-
-### 1.2 Configurare Tailwind CSS
-
-- Creare `tailwind.config.js` con content paths per `src/`
-- Aggiungere direttive Tailwind in `src/styles.scss`
-
-### 1.3 Creare file environment
-
-- `src/environments/environment.ts` (dev, con emulatori)
-- `src/environments/environment.prod.ts` (prod)
-- Entrambi con: `production`, `specSizeThresholdBytes`, `firebase: { ... }`
-
-### 1.4 Configurare Firebase
-
-- `firebase.json` (hosting, firestore, storage, functions)
-- `.firebaserc` (project alias)
-- `firestore.rules` (security rules per collection)
-- `firestore.indexes.json` (indici compositi)
-- `storage.rules` (rules per specs/ e diffs/)
-
-### 1.5 Configurare `app.config.ts`
-
-- Aggiungere `provideFirebaseApp`, `provideAuth`, `provideFirestore`, `provideStorage` da `@angular/fire`
-- Aggiungere `provideHttpClient`
-- Configurare `provideRouter` con `withComponentInputBinding()`
-
-### 1.6 Creare struttura cartelle
-
-```
-src/app/
-├── core/models/
-├── core/services/
-├── core/guards/
-├── store/
-├── features/login/
-├── features/dashboard/
-├── features/report-viewer/
-├── features/settings/
-├── shared/components/
-└── shared/pipes/
-```
-
-### 1.7 Configurare routing (`app.routes.ts`)
-
-- `/login` → LoginComponent
-- `/dashboard` → DashboardComponent (authGuard)
-- `/report/:reportId` → ReportViewerComponent (authGuard)
-- `/settings` → WatchConfigComponent (authGuard)
-- `/` → redirect a `/dashboard`
-
-**File da modificare:** `package.json`, `src/styles.scss`, `src/app/app.config.ts`, `src/app/app.routes.ts`, `angular.json`
-**File da creare:** `tailwind.config.js`, `src/environments/environment.ts`, `src/environments/environment.prod.ts`, `firebase.json`, `.firebaserc`, `firestore.rules`, `firestore.indexes.json`, `storage.rules`
+_(Completate — vedi git history per dettagli)_
 
 ---
 
-## Fase 2 — Data Models (`docs/03-data-models.md`)
+## Fase 11 — Migrazione Data Model + Firestore
 
-Creare le interfacce TypeScript:
+Migrazione dal modello `WatchConfig`-centrico al modello `Url`-centrico multi-tenant.
 
-- `src/app/core/models/watch-config.model.ts` — `WatchConfig`
-- `src/app/core/models/spec-version.model.ts` — `SpecVersion`
-- `src/app/core/models/diff-report.model.ts` — `DiffReport`, `DiffSummary`, `EndpointChange`, `FieldChange`, `ChangeType`, `HttpMethod`
-- `src/app/core/models/user-progress.model.ts` — `UserProfile`, `ReadProgress`
-- `src/app/core/services/firestore.converters.ts` — `makeConverter<T>()` generico
+### 11.1 Nuovo model `UrlDoc`
 
----
+- Creare `src/app/core/models/url.model.ts`
+  ```typescript
+  interface UrlDoc {
+    id?: string; // hash SHA-256 dell'URL
+    specUrl: string;
+    createdAt: Timestamp;
+  }
+  ```
 
-## Fase 3 — Diff Engine (`docs/04-diff-engine.md`)
+### 11.2 Aggiornare `UserProfile`
 
-- `src/app/core/services/diff-engine.ts` — Logica pura TypeScript (no Angular deps)
-- Portare da `old_software/api-watcher_old/src/diff-engine.js`:
-  - `flattenSchema()` con risoluzione `$ref` e gestione `allOf/anyOf/oneOf`
-  - `getEndpoints()`, `diffFields()`, `compareSpecs()`
-  - Regole breaking changes (endpoint rimosso, parametro required rimosso/aggiunto, tipo cambiato, campo required rimosso/aggiunto)
-- Funzione principale: `computeDiff(oldSpec, newSpec, configId, oldVersionId, newVersionId) → DiffReport`
-- Deve funzionare sia nel frontend che nelle Cloud Functions
+- In `src/app/core/models/user-progress.model.ts`:
+  - Aggiungere campo `subscribedUrls: string[]` a `UserProfile`
 
----
+### 11.3 Aggiornare `ReadProgress`
 
-## Fase 4 — Cloud Functions (`docs/05-cloud-functions.md`)
+- Rinominare `configId` → `urlHash` in `ReadProgress`
 
-### 4.1 Setup Functions
+### 11.4 Aggiornare `SpecVersion`
 
-- Creare `functions/` con `package.json`, `tsconfig.json`
-- `npm install firebase-admin firebase-functions node-fetch js-yaml`
+- In `src/app/core/models/spec-version.model.ts`:
+  - Rinominare `configId` → `urlHash`
 
-### 4.2 Implementare
+### 11.5 Aggiornare `DiffReport`
 
-- `functions/src/index.ts` — Export della function
-- `functions/src/watcher.fn.ts` — `watcherScheduled` (onSchedule, ogni 60 min, Europe/Rome)
-  - Per ogni WatchConfig: fetch spec → hash → dedup → save to Storage → save metadata → compute diff → save report → prune history
-- `functions/src/diff-engine.ts` — Copia condivisa del diff engine
+- In `src/app/core/models/diff-report.model.ts`:
+  - Rinominare `configId` → `urlHash`
 
----
+### 11.6 Eliminare `WatchConfig`
 
-## Fase 5 — Auth Store + Login (`docs/06-auth-store.md`)
+- Eliminare `src/app/core/models/watch-config.model.ts`
 
-- `src/app/store/auth.store.ts` — NgRx Signal Store
-  - State: `user`, `loading`, `error`, `initialized`
-  - Computed: `isLoggedIn`, `uid`, `displayName`, `email`
-  - Methods: `initAuthListener`, `loginWithEmail`, `loginWithGoogle`, `logout`, `clearError`
-  - Helper: `_saveProfile()` → Firestore `users/{uid}`
-  - Error mapping Firebase → messaggi italiani
-- `src/app/core/guards/auth.guard.ts` — `CanActivateFn`
-- `src/app/features/login/login.ts` — Form email/password + Google OAuth
-- `src/app/features/login/login.html` — Template Tailwind
-- `src/app/features/login/login.scss`
+### 11.7 Aggiornare Firestore converters
 
-**Verifica:** Login con email/password, login con Google, redirect a dashboard, guard blocca accesso non autenticato.
+- In `src/app/core/services/firestore.converters.ts`:
+  - Rimuovere `watchConfigConverter`
+  - Aggiungere `urlDocConverter`
 
----
+### 11.8 Aggiornare Firestore Rules
 
-## Fase 6 — Versions Store + Dashboard (`docs/07-versions-store.md`)
+- In `firestore.rules`:
+  - Rimuovere rules per `/watchConfigs/`
+  - Aggiungere rules per `/urls/{urlHash}`: read = autenticato, create = autenticato, update/delete = nessuno
+  - Aggiornare rules per `/urls/{urlHash}/versions/*`: read = autenticato, write = nessuno
+  - Aggiornare rules per `/urls/{urlHash}/diffReports/*`: read = autenticato, write = nessuno
+  - Mantenere rules per `/users/{uid}/**`: solo proprietario
 
-### 6.1 Service
+### 11.9 Semplificare Firestore Indexes
 
-- `src/app/core/services/spec-version.service.ts`
-  - `getVersions$(configId)` — Observable da Firestore
-  - `resolveSpecJson(version)` — Download da Cloud Storage
+- In `firestore.indexes.json`:
+  - Rimuovere indici compositi `(configId, timestamp)` e `(configId, generatedAt)` — non servono piu perche le subcollections sono gia scoped per URL
+  - Firestore indicizza automaticamente i singoli campi, quindi `timestamp` e `generatedAt` non richiedono indici espliciti
+  - Se servono query ordinate (es. `orderBy('timestamp', 'desc')`), il single-field index automatico basta
 
-### 6.2 Store
-
-- `src/app/store/versions.store.ts`
-  - State: `versions`, `activeConfigId`, `loadingVersions`, `previewVersion`, `previewJson`, `previewLoading`, `error`
-  - Computed: `hasVersions`, `latestVersion`
-  - Methods: `loadVersions`, `openSpecPreview`, `closeSpecPreview`, `setActiveConfig`
-
-### 6.3 Components
-
-- `src/app/features/dashboard/dashboard.ts` + `.html` + `.scss`
-  - Navbar con email utente e logout
-  - Contatore versioni non lette (da ProgressStore)
-  - Bottone settings
-  - `<app-version-timeline>` con input/output
-  - Modal overlay per preview JSON spec
-- `src/app/features/dashboard/version-timeline/version-timeline.ts` + `.html` + `.scss`
-  - Timeline verticale con dot colorati (orange=new, blue=last seen, gray=read)
-  - Badge "NEW", indicatore "← sei qui"
-  - Bottoni: Spec, Diff, Segna come letto
+**File da modificare:** `url.model.ts` (nuovo), `user-progress.model.ts`, `spec-version.model.ts`, `diff-report.model.ts`, `firestore.converters.ts`, `firestore.rules`, `firestore.indexes.json`
+**File da eliminare:** `watch-config.model.ts`
 
 ---
 
-## Fase 7 — Reports Store + Report Viewer (`docs/08-reports-store.md`)
+## Fase 12 — Migrazione Cloud Function
 
-### 7.1 Service
+### 12.1 Aggiornare `watcher.fn.ts`
 
-- `src/app/core/services/diff-report.service.ts`
-  - `getReport(configId, oldVersionId, newVersionId)`
-  - `getReportById(reportId)`
-  - `resolveChanges(report)` — Download changes da Storage
+- Cambiare iterazione: da `watchConfigs` a `urls` collection
+- Per ogni doc in `/urls/`:
+  - Fetch spec dall'URL pubblico (no headers custom)
+  - Hash del contenuto → dedup
+  - Save spec su Cloud Storage
+  - Creare doc in `/urls/{urlHash}/versions/`
+  - Compute diff con versione precedente
+  - Creare report in `/urls/{urlHash}/diffReports/`
+- Rimuovere logica di pruning (storico illimitato)
+- Rimuovere gestione headers custom
+- Cron fisso a 60 minuti (invariato)
+- **Nota:** le query su versions/diffReports diventano subcollection queries — rimuovere i filtri `where('configId', '==', ...)`, il path della subcollection gia scopa i risultati
 
-### 7.2 Store
+### 12.2 Aggiornare Cloud Storage paths
 
-- `src/app/store/reports.store.ts`
-  - State: `report`, `loading`, `error`, `activeFilter`
-  - Computed: `summary`, `filteredChanges`, `countByFilter`
-  - Methods: `loadReport`, `setFilter`, `reset`
-  - FilterType: `'all' | 'added' | 'removed' | 'modified' | 'breaking'`
+- Aggiornare i path di storage da `specs/${configId}/` a `specs/${urlHash}/` e da `diffs/${configId}/` a `diffs/${urlHash}/`
 
-### 7.3 Components
+### 12.3 Aggiornare diff engine (entrambe le copie)
 
-- `src/app/features/report-viewer/report-viewer.ts` + `.html` + `.scss`
-  - Header con back link
-  - Summary chips (4 colonne, color-coded)
-  - Bottoni filtro con conteggi
-  - Lista `<app-endpoint-card>`
-  - On init: carica report da query params, segna come visto
-- `src/app/features/report-viewer/endpoint-card/endpoint-card.ts` + `.html` + `.scss`
-  - Card espandibile
-  - Badge metodo HTTP (color-coded)
-  - Path monospace, summary, type badge, breaking indicator
-  - Espanso: tabella field changes con old/new values
+- In `functions/src/diff-engine.ts` e `src/app/core/services/diff-engine.ts`:
+  - Rinominare parametro `configId` → `urlHash` nella signature di `computeDiff`
+  - Rinominare campo `configId` → `urlHash` nell'interfaccia `DiffResult`
+
+**File da modificare:** `functions/src/watcher.fn.ts`, `functions/src/diff-engine.ts`, `src/app/core/services/diff-engine.ts`
 
 ---
 
-## Fase 8 — Progress Store (`docs/09-progress-store.md`)
+## Fase 13 — Migrazione Frontend (Stores + UI)
 
-### 8.1 Service
+### 13.1 Eliminare WatchConfig layer
 
-- `src/app/core/services/user-progress.service.ts`
-  - `getProgress$(uid, configId)` — Observable
-  - `updateLastSeen(uid, configId, versionId)`
-  - `markReportViewed(uid, configId, reportId)` — usa `arrayUnion`
+- Eliminare `src/app/core/services/watch-config.service.ts`
+- Eliminare `src/app/store/watch-config.store.ts`
+- Eliminare `src/app/features/settings/` (intera cartella)
 
-### 8.2 Store
+### 13.2 Creare `UrlService`
 
-- `src/app/store/progress.store.ts`
-  - State: `progress`, `loading`
-  - Computed: `lastSeenVersionId`, `viewedReports`, `unreadCount`
-  - Methods: `watchProgress`, `updateLastSeen`, `markReportViewed`
+- `src/app/core/services/url.service.ts`
+  - `getUrl(urlHash)` — singolo doc da `/urls/{urlHash}`
+  - `getUrls(urlHashes: string[])` — batch di doc
+  - `createUrl(specUrl: string)` — calcola hash SHA-256, crea doc con `setDoc({ merge: true })` per gestire race condition (due utenti che aggiungono lo stesso URL contemporaneamente), ritorna urlHash
+  - Helper: `hashUrl(url: string): Promise<string>` — SHA-256 hex via `crypto.subtle.digest` (async nel browser)
 
-### 8.3 Shared
+### 13.3 Creare `UrlsStore`
 
-- `src/app/shared/pipes/relative-time.pipe.ts` — "adesso", "Nm fa", "Nh fa", "ieri", "Ng fa", date it-IT
-- `src/app/shared/components/badge/badge.ts` — Componente badge riutilizzabile
+- `src/app/store/urls.store.ts`
+  - State: `urls: UrlDoc[]`, `loading: boolean`
+  - Methods: `loadUrls(urlHashes: string[])` — carica doc da Firestore
+  - Computed: `urlMap` — `Record<string, string>` (urlHash → specUrl)
+
+### 13.4 Aggiornare `AuthStore`
+
+- In `src/app/store/auth.store.ts`:
+  - State: aggiungere `subscribedUrls: string[]`
+  - Computed: aggiungere `hasUrls`
+  - Methods: aggiungere `subscribeToUrl(url: string)` e `unsubscribeFromUrl(urlHash: string)`
+  - `subscribeToUrl`: chiama `UrlService.createUrl()`, poi `arrayUnion` su profilo utente
+  - `unsubscribeFromUrl`: `arrayRemove` su profilo utente
+  - Aggiungere `_loadProfile()`: su auth state change, legge il doc utente da Firestore e popola `subscribedUrls` nello state (attualmente `_saveProfile` scrive ma nulla rilegge)
+  - `_saveProfile()`: inizializza `subscribedUrls: []` solo alla prima creazione del profilo (non a ogni login). Le modifiche successive passano via `arrayUnion`/`arrayRemove`
+
+### 13.5 Aggiornare `SpecVersionService`
+
+- In `src/app/core/services/spec-version.service.ts`:
+  - `getVersions$(urlHash)` — query su `/urls/{urlHash}/versions/`
+  - Rimuovere filtro `where('configId', ...)` — la subcollection e' gia scoped
+  - Aggiornare path Firestore
+
+### 13.6 Aggiornare `VersionsStore`
+
+- In `src/app/store/versions.store.ts`:
+  - Rinominare `activeConfigId` → `activeUrlHash`
+  - `loadVersions(urlHash)`, `setActiveUrl(urlHash)`
+  - Rimuovere `onInit` che carica `loadVersions('default')` — nel nuovo modello non c'e' un default, il dashboard imposta l'URL attivo quando l'utente seleziona dalla sidebar
+
+### 13.7 Aggiornare `DiffReportService`
+
+- In `src/app/core/services/diff-report.service.ts`:
+  - `getReport(urlHash, oldVersionId, newVersionId)` — query su `/urls/{urlHash}/diffReports/`
+  - `getReportById(urlHash, reportId)` — ora richiede `urlHash` perche i report vivono in subcollections. Il path diventa `/urls/{urlHash}/diffReports/{reportId}`
+  - Rimuovere filtro `where('configId', ...)` — la subcollection e' gia scoped
+
+### 13.8 Aggiornare `ReportsStore`
+
+- In `src/app/store/reports.store.ts`:
+  - `configId` → `urlHash` ovunque
+
+### 13.9 Aggiornare `UserProgressService`
+
+- In `src/app/core/services/user-progress.service.ts`:
+  - `configId` → `urlHash` nei parametri e nei path Firestore
+
+### 13.10 Aggiornare `ProgressStore`
+
+- In `src/app/store/progress.store.ts`:
+  - `configId` → `urlHash` ovunque
+
+### 13.11 Aggiornare Dashboard
+
+- In `src/app/features/dashboard/dashboard.ts` + `.html` + `.scss`:
+  - Aggiungere **sidebar** a sinistra:
+    - Lista URL iscritti (da `authStore.subscribedUrls` + `urlsStore.urlMap`)
+    - Badge unread count per URL (da `progressStore`)
+    - Bottone "Aggiungi URL" → input per incollare URL Scalar
+    - Bottone rimuovi per ogni URL
+  - Area principale: timeline versioni dell'URL selezionato
+  - **Empty state**: quando un URL e' appena aggiunto e la Cloud Function non ha ancora processato, mostrare messaggio "URL aggiunto, in attesa del primo scan" (non timeline vuota senza spiegazione)
+  - Navigazione "Diff": passare `urlHash` come query param insieme a `oldVersionId`/`newVersionId` (era `configId`)
+  - Rimuovere bottone "Settings" dalla navbar
+
+### 13.12 Aggiornare Report Viewer
+
+- In `src/app/features/report-viewer/report-viewer.ts`:
+  - Leggere `urlHash` (era `configId`) dai query params
+  - Passare `urlHash` a `DiffReportService.getReportById(urlHash, reportId)`
+  - Passare `urlHash` a `progressStore.markReportViewed()`
+
+### 13.13 Aggiornare Routing
+
+- In `src/app/app.routes.ts`:
+  - Rimuovere rotta `/settings`
+  - Rotte finali: `/login`, `/dashboard`, `/report/:reportId`, `/` → redirect
+
+### 13.14 Aggiornare test
+
+- Aggiornare `diff-engine.spec.ts`: riferimenti `configId` → `urlHash`
+- Aggiornare eventuali test di stores e services che usano `configId`
+
+### 13.15 Aggiornare struttura cartelle
+
+- Rimuovere `src/app/features/settings/`
+- Struttura finale:
+  ```
+  src/app/
+  ├── core/models/        (url.model.ts al posto di watch-config.model.ts)
+  ├── core/services/      (url.service.ts al posto di watch-config.service.ts)
+  ├── core/guards/
+  ├── store/              (urls.store.ts al posto di watch-config.store.ts)
+  ├── features/login/
+  ├── features/dashboard/ (con sidebar integrata)
+  ├── features/report-viewer/
+  ├── shared/components/
+  └── shared/pipes/
+  ```
+
+**File da creare:** `url.model.ts`, `url.service.ts`, `urls.store.ts`
+**File da modificare:** `auth.store.ts`, `spec-version.service.ts`, `versions.store.ts`, `diff-report.service.ts`, `reports.store.ts`, `user-progress.service.ts`, `progress.store.ts`, `dashboard.ts`, `dashboard.html`, `dashboard.scss`, `report-viewer.ts`, `app.routes.ts`, `diff-engine.spec.ts`
+**File da eliminare:** `watch-config.service.ts`, `watch-config.store.ts`, `features/settings/*`
 
 ---
 
-## Fase 9 — Settings / Watch Config (`docs/10-settings.md`)
-
-### 9.1 Service
-
-- `src/app/core/services/watch-config.service.ts`
-  - `getConfigs$()` — Observable
-  - `create(data, uid)`
-  - `delete(id)`
-
-### 9.2 Store
-
-- `src/app/store/watch-config.store.ts`
-  - State: `configs`, `loading`, `saving`, `error`
-  - Methods: `loadConfigs`, `addConfig`, `removeConfig`
-
-### 9.3 Component
-
-- `src/app/features/settings/watch-config.ts` + `.html` + `.scss`
-  - Lista config esistenti (read-only con delete)
-  - Form per aggiungere nuova config:
-    - URL spec OpenAPI (required)
-    - Cron schedule (default: `0 * * * *`)
-    - Max history (5-200, default: 50)
-    - Headers HTTP custom (lista dinamica key-value)
-
----
-
-## Fase 10 — Integrazione & Polish
-
-- Collegare ProgressStore al Dashboard (contatore unread, indicatori timeline)
-- Collegare ReportsStore al flusso "Diff" dal Dashboard
-- Verificare flusso completo: login → dashboard → view spec → view diff → mark as read → settings
-- Configurare Prettier (100 char, single quotes, Angular HTML parser)
-- Test unitari per diff engine e stores
-- Deploy su Firebase Hosting
-
----
-
-## Verifica End-to-End
+## Verifica End-to-End (aggiornata)
 
 1. `npm start` → app si avvia senza errori
 2. Login con email/password e Google → redirect a dashboard
-3. Dashboard mostra versioni dalla Firestore (serve dati seed o Cloud Function attiva)
-4. Click "Diff" → navigazione a report viewer con filtri funzionanti
-5. Click "Segna come letto" → progresso aggiornato, badge scompaiono
-6. Settings → aggiungere/rimuovere watch config
-7. `npm test` → tutti i test passano
-8. `npm run build` → build di produzione senza errori
-9. Cloud Function watcher esegue correttamente (test con emulatori)
+3. Dashboard mostra sidebar vuota per utente nuovo
+4. "Aggiungi URL" → inserire URL Scalar → appare nella sidebar
+5. Al prossimo ciclo Cloud Function (o con dati seed): versioni appaiono nella timeline
+6. Click "Diff" → navigazione a report viewer con filtri funzionanti
+7. Click "Segna come letto" → progresso aggiornato, badge scompaiono
+8. Rimuovi URL → sparisce dalla sidebar, dati restano in Firestore
+9. Secondo utente aggiunge stesso URL → vede gli stessi dati, progress indipendente
+10. `npm test` → tutti i test passano
+11. `npm run build` → build di produzione senza errori
+12. Cloud Function itera su `/urls/` e processa correttamente
