@@ -16,18 +16,18 @@ I design docs (`docs/00-init.md` → `docs/10-settings.md`) definiscono ogni asp
 
 ## Stato Avanzamento
 
-| Fase | Descrizione                                    | Stato      |
-| ---- | ---------------------------------------------- | ---------- |
-| 1    | Setup, dipendenze, Firebase, Tailwind, routing | ✅ Fatto   |
-| 2    | Data Models                                    | ✅ Fatto   |
-| 3    | Diff Engine                                    | ✅ Fatto   |
-| 4    | Cloud Functions                                | ✅ Fatto   |
-| 5    | Auth Store + Login                             | ✅ Fatto   |
-| 6    | Versions Store + Dashboard                     | ✅ Fatto   |
-| 7    | Reports Store + Report Viewer                  | ✅ Fatto   |
-| 8    | Progress Store                                 | ✅ Fatto   |
-| 9    | Settings / Watch Config                        | ⬜ Da fare |
-| 10   | Integrazione & Polish                          | ⬜ Da fare |
+| Fase | Descrizione                                    | Stato    |
+| ---- | ---------------------------------------------- | -------- |
+| 1    | Setup, dipendenze, Firebase, Tailwind, routing | ✅ Fatto |
+| 2    | Data Models                                    | ✅ Fatto |
+| 3    | Diff Engine                                    | ✅ Fatto |
+| 4    | Cloud Functions                                | ✅ Fatto |
+| 5    | Auth Store + Login                             | ✅ Fatto |
+| 6    | Versions Store + Dashboard                     | ✅ Fatto |
+| 7    | Reports Store + Report Viewer                  | ✅ Fatto |
+| 8    | Progress Store                                 | ✅ Fatto |
+| 9    | Settings / Watch Config                        | ✅ Fatto |
+| 10   | Integrazione & Polish                          | ✅ Fatto |
 
 ---
 
